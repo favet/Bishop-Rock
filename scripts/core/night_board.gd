@@ -8,6 +8,7 @@ extends Node2D
 
 signal board_over
 signal night_won(stats: Dictionary)
+signal perfect_kill
 
 var kills: int = 0
 var rammed: int = 0  ## boats that reached the lighthouse (not sunk by damage)
@@ -78,11 +79,13 @@ func _on_boat_died(boat: Boat) -> void:
 	kills += 1
 	var reward := _base_reward(boat)
 	var label := "+%ds" % reward
-	if boat.killed_by_perfect:
+	var is_perfect := boat.killed_by_perfect
+	if is_perfect:
 		var bonus := _perfect_kill_bonus(boat)
 		reward += bonus
 		perfect_bonus_earned += bonus
 		label = "+%ds PERFECT" % reward
+		perfect_kill.emit()
 	gold_earned += reward
 	if campaign_mode:
 		CampaignState.gold += reward
@@ -90,7 +93,7 @@ func _on_boat_died(boat: Boat) -> void:
 		CampaignState.run_gold_earned += reward
 		if boat.killed_by_perfect:
 			CampaignState.run_perfects += 1
-	_float_text(boat.global_position, label, Color(1.0, 0.85, 0.25))
+	_float_text(boat.global_position, label, Color(1.0, 0.85, 0.25), 30 if is_perfect else 16)
 
 func _on_shot_hit(boat: Boat, quality: int, killed: bool) -> void:
 	if killed or quality != MainGun.ShotQuality.PERFECT or boat.perfect_reward_claimed:
@@ -185,8 +188,8 @@ func _crash_damage(boat: Boat) -> int:
 		return 4
 	return 6
 
-func _float_text(pos: Vector2, text: String, color: Color) -> void:
-	_floating_texts.append({position = pos, text = text, color = color, age = 0.0})
+func _float_text(pos: Vector2, text: String, color: Color, size: int = 16) -> void:
+	_floating_texts.append({position = pos, text = text, color = color, age = 0.0, size = size})
 	queue_redraw()
 
 func _draw() -> void:
@@ -195,4 +198,4 @@ func _draw() -> void:
 		var t := float(item["age"])
 		var color: Color = item["color"]
 		color.a = 1.0 - t
-		draw_string(font, to_local(item["position"]), item["text"], HORIZONTAL_ALIGNMENT_CENTER, 120, 16, color)
+		draw_string(font, to_local(item["position"]), item["text"], HORIZONTAL_ALIGNMENT_CENTER, 160, int(item.get("size", 16)), color)

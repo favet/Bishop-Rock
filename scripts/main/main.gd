@@ -50,6 +50,7 @@ func _ready() -> void:
 	_board.board_over.connect(_on_board_over)
 	_board.night_won.connect(_on_night_won)
 	_board.lighthouse.damaged.connect(_on_lighthouse_damaged)
+	_board.perfect_kill.connect(_on_perfect_kill)
 	if CampaignState.day == 1 and CampaignState.last_night_stats.is_empty():
 		_board.spawner.active = false
 		_hud.visible = false
@@ -75,6 +76,20 @@ func _process(delta: float) -> void:
 
 func _on_lighthouse_damaged(amount: float) -> void:
 	_shake_strength = minf(_shake_strength + amount * SHAKE_PER_DAMAGE, SHAKE_MAX)
+
+## Hit-stop + zoom pulse on a perfect kill: freeze the world for a beat and
+## punch the camera so the signature move lands physically.
+func _on_perfect_kill() -> void:
+	if _frozen:
+		return
+	Engine.time_scale = 0.05
+	_camera.zoom = Vector2.ONE * 1.10
+	var tween := create_tween().set_ignore_time_scale(true)
+	tween.tween_property(_camera, "zoom", Vector2.ONE, 0.25) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	await get_tree().create_timer(0.07, true, false, true).timeout
+	if not _frozen:
+		Engine.time_scale = SLOW_SCALE if _slowed else 1.0
 
 func _on_board_over() -> void:
 	_frozen = true
