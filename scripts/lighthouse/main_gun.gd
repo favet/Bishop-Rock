@@ -229,6 +229,7 @@ func _cycle_target() -> void:
 func _release_shot() -> void:
 	_charging = false
 	var quality := quality_at(_charge)
+	Sfx.play("rifle_crack")
 	_resolve_shot(quality)
 	_charge = 0.0
 
@@ -236,6 +237,7 @@ func _release_shot() -> void:
 func _misfire() -> void:
 	_charging = false
 	_charge = 0.0
+	Sfx.play("rifle_crack", -2.0, 0.6)
 	_resolve_shot(ShotQuality.MISFIRE)
 	_cooldown_left = reload_time * misfire_reload_penalty
 	_misfire_flash_age = 0.0

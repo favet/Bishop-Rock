@@ -144,6 +144,7 @@ func _auto_use_mines() -> void:
 			CampaignState.mines -= 1
 			defenses_consumed["mines"] = int(defenses_consumed["mines"]) + 1
 			_float_text(boat.global_position, "MINE -6", Color(1.0, 0.45, 0.2))
+			Sfx.play("mine_thump")
 			boat.take_damage(6.0)
 			return
 

@@ -55,6 +55,8 @@ func _ready() -> void:
 		_board.spawner.active = false
 		_hud.visible = false
 		_show_start_screen()
+	else:
+		Sfx.play("foghorn", -4.0)
 
 func _process(delta: float) -> void:
 	if Input.is_action_just_pressed("restart"):
@@ -76,12 +78,15 @@ func _process(delta: float) -> void:
 
 func _on_lighthouse_damaged(amount: float) -> void:
 	_shake_strength = minf(_shake_strength + amount * SHAKE_PER_DAMAGE, SHAKE_MAX)
+	Sfx.play("hull_crunch")
+	Sfx.duck_ambient()
 
 ## Hit-stop + zoom pulse on a perfect kill: freeze the world for a beat and
 ## punch the camera so the signature move lands physically.
 func _on_perfect_kill() -> void:
 	if _frozen:
 		return
+	Sfx.play("perfect_ding")
 	Engine.time_scale = 0.05
 	_camera.zoom = Vector2.ONE * 1.10
 	var tween := create_tween().set_ignore_time_scale(true)
@@ -121,6 +126,7 @@ func _show_start_screen() -> void:
 		_clear_campaign_layer()
 		_hud.visible = true
 		_board.spawner.active = true
+		Sfx.play("foghorn", -4.0)
 	)
 	list.add_child(start)
 
@@ -245,6 +251,7 @@ func _show_day_hub() -> void:
 	start.add_child(_start_night_label)
 	_start_night_label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	start.pressed.connect(func() -> void:
+		Sfx.play("ui_click")
 		Engine.time_scale = 1.0
 		get_tree().reload_current_scene()
 	)
@@ -277,6 +284,7 @@ func _zone_card(zone: String) -> Button:
 	card.add_theme_stylebox_override("normal", _panel_style(PANEL, BRASS_DARK, 2))
 	card.add_theme_stylebox_override("hover", _panel_style(PANEL_HOVER, BRASS, 2))
 	card.pressed.connect(_select_zone.bind(zone))
+	card.pressed.connect(Sfx.play.bind("ui_click"))
 	_zone_buttons[zone] = card
 	return card
 
@@ -340,6 +348,7 @@ func _project_card(project_id: String) -> VBoxContainer:
 				_resource_row(inner, "-", key, missing, RED, _gain_hint(key))
 	var button := Button.new()
 	button.custom_minimum_size = Vector2(0, 30)
+	button.pressed.connect(Sfx.play.bind("ui_click"))
 	button.mouse_entered.connect(_set_daylight_preview.bind(1 if CampaignState.active_projects.has(project_id) else 0))
 	button.mouse_exited.connect(_set_daylight_preview.bind(0))
 	if CampaignState.completed_projects.has(project_id):
@@ -503,6 +512,7 @@ func _base_card_button() -> Button:
 	button.add_theme_color_override("font_color", TEXT)
 	button.add_theme_stylebox_override("normal", _panel_style(Color(0.075, 0.085, 0.085), BRASS_DARK, 1))
 	button.add_theme_stylebox_override("hover", _panel_style(PANEL_HOVER, BRASS, 2))
+	button.pressed.connect(Sfx.play.bind("ui_click"))
 	return button
 
 func _card_title(parent: VBoxContainer, title_text: String, subtitle: String, wrap: bool = true) -> void:
