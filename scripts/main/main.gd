@@ -151,6 +151,17 @@ func _show_dawn(stats: Dictionary) -> void:
 		"Repair to full would require approximately: %s" % _repair_hint(),
 	]:
 		_small_label(list, line, TEXT)
+	var salvage: Dictionary = CampaignState.salvage_dive_bonus()
+	if int(salvage["wood"]) > 0 or int(salvage["scrap"]) > 0:
+		_small_label(list, "Wreckage litters the shallows - today's dive will be rich.", BRASS)
+	# First three dawns teach, one line each. No tutorial system.
+	var hints := {
+		1: "Keeper's note: patch the hull before nightfall - crashes cost more than repairs.",
+		2: "Keeper's note: salvage iron and machine parts to unlock workshop projects.",
+		3: "Keeper's note: rest or a cooked meal today means more Daylight tomorrow.",
+	}
+	if hints.has(int(stats["night"])):
+		_small_label(list, hints[int(stats["night"])], MUTED)
 	var button := Button.new()
 	button.text = "Continue to Day %d" % (CampaignState.day + 1)
 	button.custom_minimum_size = Vector2(0, 38)
@@ -388,6 +399,10 @@ func _actions_for_zone(zone: String) -> Array[Dictionary]:
 		}
 		if def.has("note"):
 			entry["note"] = def["note"]
+		if id == "dive_wreckage":
+			var bonus: Dictionary = CampaignState.salvage_dive_bonus()
+			if int(bonus["wood"]) > 0 or int(bonus["scrap"]) > 0:
+				entry["note"] = "Once per day. Last night's wrecks\nand crates sweeten the dive."
 		if id == "scout_raid" and not CampaignState.scouted_profile.is_empty():
 			entry["effect"] = "%s, about %d boats" % [
 				CampaignState.scouted_profile["profile_name"],

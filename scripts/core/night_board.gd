@@ -17,6 +17,7 @@ var game_over: bool = false
 var campaign_mode: bool = true
 var gold_earned: int = 0
 var perfect_bonus_earned: int = 0
+var perfect_kills: int = 0
 var hull_damage_taken: int = 0
 var defenses_consumed: Dictionary = {"mines": 0, "barricades": 0}
 
@@ -85,6 +86,7 @@ func _on_boat_died(boat: Boat) -> void:
 		reward += bonus
 		perfect_bonus_earned += bonus
 		label = "+%ds PERFECT" % reward
+		perfect_kills += 1
 		perfect_kill.emit()
 	gold_earned += reward
 	if campaign_mode:
@@ -157,6 +159,7 @@ func _check_for_dawn() -> void:
 		"night": CampaignState.day if campaign_mode else 0,
 		"kills": kills,
 		"crashed": rammed,
+		"perfects": perfect_kills,
 		"gold_earned": gold_earned,
 		"perfect_bonus_earned": perfect_bonus_earned,
 		"hull_damage_taken": hull_damage_taken,

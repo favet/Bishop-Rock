@@ -304,7 +304,21 @@ func action_gain(action_id: String) -> Dictionary:
 		"harvest_potatoes":
 			if completed_projects.has("garden_bed_prep"):
 				gain["food"] += 1
+		"dive_wreckage":
+			var bonus := salvage_dive_bonus()
+			gain["wood"] += int(bonus["wood"])
+			gain["scrap"] += int(bonus["scrap"])
 	return gain
+
+## Last night's chaos seeds today's recovery: crashed boats wash up timber,
+## perfect kills leave intact cargo crates of iron. Both sweeten the first
+## dive of the day (dive is once per day), so a bad night funds its own
+## repairs and good shooting pays visibly by day.
+func salvage_dive_bonus() -> Dictionary:
+	return {
+		"wood": mini(int(last_night_stats.get("crashed", 0)), 3),
+		"scrap": mini(int(last_night_stats.get("perfects", 0)), 3),
+	}
 
 func perform_action(action_id: String) -> String:
 	var action: Dictionary = ACTIONS.get(action_id, {})
