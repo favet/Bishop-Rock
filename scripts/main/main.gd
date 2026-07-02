@@ -37,6 +37,10 @@ func _ready() -> void:
 	_board.board_over.connect(_on_board_over)
 	_board.night_won.connect(_on_night_won)
 	_board.lighthouse.damaged.connect(_on_lighthouse_damaged)
+	if CampaignState.day == 1 and CampaignState.last_night_stats.is_empty():
+		_board.spawner.active = false
+		_hud.visible = false
+		_show_start_screen()
 
 func _process(delta: float) -> void:
 	if Input.is_action_just_pressed("restart"):
@@ -62,6 +66,33 @@ func _on_board_over() -> void:
 func _on_night_won(stats: Dictionary) -> void:
 	_hud.visible = false
 	_show_dawn(stats)
+
+func _show_start_screen() -> void:
+	_campaign_layer.add_child(_full_screen_dim())
+	var center := _center_box(Vector2(420, 220))
+	_campaign_layer.add_child(center)
+	var box := center.get_child(0) as PanelContainer
+	var list := VBoxContainer.new()
+	list.add_theme_constant_override("separation", 10)
+	box.add_child(list)
+	var title := Label.new()
+	title.text = "Bishop Rock"
+	title.add_theme_font_size_override("font_size", 28)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	list.add_child(title)
+	var summary := Label.new()
+	summary.text = "Seven days of raids, repairs, food, and hard choices."
+	summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	list.add_child(summary)
+	var start := Button.new()
+	start.text = "Start New Campaign"
+	start.pressed.connect(func() -> void:
+		CampaignState.reset_campaign()
+		_clear_campaign_layer()
+		_hud.visible = true
+		_board.spawner.active = true
+	)
+	list.add_child(start)
 
 func _show_dawn(stats: Dictionary) -> void:
 	_campaign_layer.add_child(_full_screen_dim())
