@@ -69,6 +69,7 @@ const START_PROJECTS := {
 	},
 }
 
+var run_seed: int
 var day: int
 var hull: int
 var max_hull: int
@@ -96,7 +97,8 @@ var scouted_profile: Dictionary
 func _ready() -> void:
 	reset_campaign()
 
-func reset_campaign() -> void:
+func reset_campaign(seed_value: int = -1) -> void:
+	run_seed = seed_value if seed_value >= 0 else randi() % 1000000
 	day = 1
 	hull = 85
 	max_hull = 100
@@ -381,6 +383,13 @@ func _advance_crops() -> void:
 
 func _open_farm_plots() -> int:
 	return farm_plots - active_crops.size()
+
+## Fresh RNG seeded from (run seed, day): the same night replays identically
+## after a restart, and a typed seed reproduces a whole run.
+func night_rng() -> RandomNumberGenerator:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([run_seed, day])
+	return rng
 
 func raid_profile() -> Dictionary:
 	if day <= 3:

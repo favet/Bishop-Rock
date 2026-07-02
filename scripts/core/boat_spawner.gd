@@ -35,9 +35,13 @@ var spawned_count: int = 0
 var _elapsed: float = 0.0
 var _timer: float = 0.0
 var _gun: MainGun
+# Deterministic per (run seed, day): the same night replays with the same
+# boats regardless of restarts. Shareable seeds depend on this.
+var _rng: RandomNumberGenerator
 
 func _ready() -> void:
 	_timer = first_spawn_delay
+	_rng = CampaignState.night_rng()
 
 func _physics_process(delta: float) -> void:
 	if not active or wave_complete():
@@ -65,7 +69,7 @@ func wave_complete() -> bool:
 	return spawned_count >= wave_size
 
 func _pick_scene() -> PackedScene:
-	var roll := randf()
+	var roll := _rng.randf()
 	if roll < heavy_boat_weight and heavy_boat_scene != null:
 		return heavy_boat_scene
 	if roll < heavy_boat_weight + fast_boat_weight and fast_boat_scene != null:
@@ -74,10 +78,10 @@ func _pick_scene() -> PackedScene:
 
 func _spawn() -> void:
 	var boat := _pick_scene().instantiate() as Boat
-	var angle := randf() * TAU
+	var angle := _rng.randf() * TAU
 	boat.position = OceanGrid.polar(angle, OceanGrid.ring_radius(OceanGrid.Ring.HORIZON))
 	# Slight speed variation so waves don't arrive as a single line.
-	boat.speed *= randf_range(0.85, 1.15) * speed_scale
+	boat.speed *= _rng.randf_range(0.85, 1.15) * speed_scale
 	get_node(boats_container).add_child(boat)
 	spawned_count += 1
 	boat_spawned.emit(boat)

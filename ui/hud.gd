@@ -49,8 +49,8 @@ func _process(delta: float) -> void:
 	_update_damage_feedback(delta)
 
 	if _board.game_over and not _game_over.visible:
-		_game_over_label.text = "LIGHTHOUSE LOST\n\nSurvived %ds - %d boats sunk\n\nPress R to restart" % [
-			int(_board.elapsed), _board.kills]
+		_game_over_label.text = "LIGHTHOUSE LOST\n\nSurvived %ds - %d boats sunk\nSeed %d\n\nPress R to restart" % [
+			int(_board.elapsed), _board.kills, CampaignState.run_seed]
 		_game_over.visible = true
 
 func _update_health(delta: float) -> void:

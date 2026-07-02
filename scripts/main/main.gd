@@ -89,13 +89,16 @@ func _show_start_screen() -> void:
 	list.add_theme_constant_override("separation", 12)
 	box.add_child(list)
 	_card_title(list, "Bishop Rock", "The sea never relents. Hold the light, night after night.")
+	var seed_input := LineEdit.new()
+	seed_input.placeholder_text = "Seed (optional - share a run)"
+	list.add_child(seed_input)
 	var start := Button.new()
 	start.text = "Start New Campaign"
 	start.custom_minimum_size = Vector2(0, 44)
 	start.add_theme_stylebox_override("normal", _panel_style(BRASS, Color(0.92, 0.78, 0.42), 2))
 	start.add_theme_color_override("font_color", Color(0.07, 0.05, 0.03))
 	start.pressed.connect(func() -> void:
-		CampaignState.reset_campaign()
+		CampaignState.reset_campaign(int(seed_input.text) if seed_input.text.strip_edges().is_valid_int() else -1)
 		_clear_campaign_layer()
 		_hud.visible = true
 		_board.spawner.active = true
