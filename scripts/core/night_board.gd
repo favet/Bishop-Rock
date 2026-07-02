@@ -119,13 +119,16 @@ func _apply_campaign_profile() -> void:
 	spawner.fast_boat_weight = float(profile["fast_weight"])
 	spawner.heavy_boat_weight = float(profile["heavy_weight"])
 	spawner.max_simultaneous = int(profile["max_simultaneous"])
-	spawner.speed_scale = float(profile["speed_scale"]) * (0.8 if CampaignState.mercy else 1.0)
+	var wx: Dictionary = RunState.WEATHERS[CampaignState.weather]
+	spawner.speed_scale = float(profile["speed_scale"]) * float(wx["speed"]) \
+		* (0.8 if CampaignState.mercy else 1.0)
 	spawner.start_interval = float(profile["start_interval"])
 	spawner.min_interval = float(profile["min_interval"])
 	spawner.first_spawn_delay = float(profile["first_spawn_delay"])
 	lighthouse.max_health = CampaignState.max_hull
 	lighthouse.health = CampaignState.hull
 	_beam.turn_speed_multiplier = CampaignState.beam_turn_multiplier()
+	_beam.cone_half_angle_deg *= float(wx["cone"])
 	if CampaignState.mercy:
 		_beam.cone_half_angle_deg *= 1.25
 	_gun.reload_time *= CampaignState.reload_multiplier()

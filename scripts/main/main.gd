@@ -413,6 +413,16 @@ func _actions_for_zone(zone: String) -> Array[Dictionary]:
 				CampaignState.scouted_profile["profile_name"],
 				int(CampaignState.scouted_profile["wave_size"])]
 		out.append(entry)
+	# Today's rotating opportunity, if it belongs to this zone and is unused.
+	var opp_id: String = CampaignState.today_opportunity
+	if not opp_id.is_empty() and not CampaignState.daily_caps.get("opportunity", false):
+		var opp: Dictionary = CampaignState.OPPORTUNITIES[opp_id]
+		if opp["zone"] == zone:
+			out.append({
+				"id": opp_id, "name": opp["name"], "effect": opp["effect"],
+				"cost": opp["cost"], "gain": CampaignState.action_gain(opp_id),
+				"note": "Opportunity - today only.",
+			})
 	return out
 
 func _refresh_day_ui() -> void:
@@ -428,7 +438,9 @@ func _refresh_day_ui() -> void:
 	_top_bar.add_child(_resource_badge("day", str(CampaignState.day)))
 	if _start_night_label != null:
 		var profile := CampaignState.raid_profile()
-		_start_night_label.text = "START NIGHT %d\n%s - %d boats" % [CampaignState.day, profile["profile_name"], int(profile["wave_size"])]
+		_start_night_label.text = "START NIGHT %d\n%s - %d boats - %s" % [
+			CampaignState.day, profile["profile_name"], int(profile["wave_size"]),
+			RunState.WEATHERS[CampaignState.weather]["label"]]
 	_update_daylight_tokens()
 
 func _zone_label(zone: String) -> String:
@@ -622,6 +634,9 @@ func _defense_strip() -> PanelContainer:
 	_small_label(row, "Barricades %d" % CampaignState.barricades, TEXT, false)
 	if not CampaignState.scouted_profile.is_empty():
 		_small_label(row, "Scout: %s" % CampaignState.scouted_profile["profile_name"], MUTED, false)
+	if not CampaignState.today_opportunity.is_empty() and not CampaignState.daily_caps.get("opportunity", false):
+		var opp: Dictionary = CampaignState.OPPORTUNITIES[CampaignState.today_opportunity]
+		_small_label(row, "Opportunity: %s (%s)" % [opp["name"], opp["zone"]], BRASS, false)
 	return wrap
 
 func _daylight_cost(cost: Dictionary) -> int:

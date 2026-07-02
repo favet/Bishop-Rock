@@ -131,6 +131,7 @@ func reset_campaign(seed_value: int = -1, mercy_enabled: bool = false) -> void:
 	run_kills = 0
 	run_gold_earned = 0
 	run_perfects = 0
+	_roll_day_flavor()
 	changed.emit()
 
 func start_day() -> void:
@@ -140,6 +141,7 @@ func start_day() -> void:
 	tomorrow_energy_bonus = 0
 	scouted_profile = {}
 	day += 1
+	_roll_day_flavor()
 	_log_telemetry("dawn")
 	changed.emit()
 
@@ -298,10 +300,64 @@ const ACTIONS := {
 	},
 }
 
+## One rotating bonus action per day, drawn from this pool by the run seed.
+## Same card machinery as ACTIONS; "zone" is where it shows up.
+const OPPORTUNITIES := {
+	"passing_merchant": {
+		"name": "Passing Merchant", "zone": "Supplies", "effect": "Sell timber at a good rate",
+		"cost": {"energy_today": 1, "wood": 4}, "gain": {"gold": 7},
+		"log": "Sold timber to the merchant sloop.",
+	},
+	"seal_colony": {
+		"name": "Seal Colony", "zone": "Supplies", "effect": "Easy hunting on the north rocks",
+		"cost": {"energy_today": 1}, "gain": {"food": 4},
+		"log": "Came back heavy with meat.",
+	},
+	"calm_tide": {
+		"name": "Calm Tide", "zone": "Supplies", "effect": "The shallows give up their secrets",
+		"cost": {"energy_today": 2}, "gain": {"wood": 3, "scrap": 3},
+		"log": "Calm water made for easy salvage.",
+	},
+	"iron_barge": {
+		"name": "Iron Barge Wreck", "zone": "Crafting", "effect": "A barge broke up on the reef",
+		"cost": {"energy_today": 2}, "gain": {"scrap": 5},
+		"log": "Stripped the barge to its ribs.",
+	},
+	"quiet_morning": {
+		"name": "Quiet Morning", "zone": "Rest", "effect": "The sea is kind, for once",
+		"cost": {"energy_today": 1}, "gain": {"tomorrow_daylight": 1},
+		"log": "A rare unhurried morning.",
+	},
+	"travelling_smith": {
+		"name": "Travelling Smith", "zone": "Crafting", "effect": "A smith offers cut-rate work",
+		"cost": {"energy_today": 1, "gold": 6}, "gain": {"tools": 1},
+		"log": "The smith machined a part for cheap.",
+	},
+}
+
+## Weather rolled per day: one enum, two knobs on the night.
+const WEATHERS := {
+	"clear": {"label": "Clear", "speed": 1.0, "cone": 1.0},
+	"fog": {"label": "Fog", "speed": 0.9, "cone": 0.8},
+	"swell": {"label": "Heavy swell", "speed": 1.1, "cone": 1.0},
+}
+var today_opportunity: String
+var weather: String
+
+func _roll_day_flavor() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([run_seed, day, "flavor"])
+	today_opportunity = OPPORTUNITIES.keys()[rng.randi() % OPPORTUNITIES.size()]
+	var roll := rng.randf()
+	weather = "clear" if roll < 0.5 else ("fog" if roll < 0.75 else "swell")
+
 ## Gain with project modifiers applied — the UI shows this too, so a
 ## completed project's bonus is visible on the card, not a surprise.
+func action_def(action_id: String) -> Dictionary:
+	return ACTIONS.get(action_id, OPPORTUNITIES.get(action_id, {}))
+
 func action_gain(action_id: String) -> Dictionary:
-	var gain: Dictionary = ACTIONS[action_id]["gain"].duplicate()
+	var gain: Dictionary = action_def(action_id)["gain"].duplicate()
 	match action_id:
 		"patch_hull":
 			if completed_projects.has("patch_frame"):
@@ -327,9 +383,14 @@ func salvage_dive_bonus() -> Dictionary:
 
 func perform_action(action_id: String) -> String:
 	var action: Dictionary = ACTIONS.get(action_id, {})
+	var cap: String = action.get("daily_cap", "")
+	if action.is_empty():
+		if action_id != today_opportunity:
+			return "Unknown action."
+		action = OPPORTUNITIES[action_id]
+		cap = "opportunity"  # each opportunity is once, today only
 	if action.is_empty():
 		return "Unknown action."
-	var cap: String = action.get("daily_cap", "")
 	if not cap.is_empty() and daily_caps.get(cap, false):
 		return "%s is done for today." % action["name"]
 	match action_id:  # preconditions a cost dict can't express
