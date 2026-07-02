@@ -14,6 +14,7 @@ extends Node2D
 @export var fire_interval: float = 0.85
 @export var base_damage: float = 1.0
 @export var illuminated_multiplier: float = 1.5
+@export var enabled: bool = true
 
 var _fire_timer: float = 0.0
 var _tracers: Array[Dictionary] = []  # {to: Vector2, age: float}
@@ -25,6 +26,8 @@ func _ready() -> void:
 	add_to_group("turrets")
 
 func _physics_process(delta: float) -> void:
+	if not enabled:
+		return
 	if _gun == null:
 		_gun = get_tree().get_first_node_in_group("main_gun") as MainGun
 	var scaled_delta := delta * (_gun.world_time_scale() if _gun != null else 1.0)

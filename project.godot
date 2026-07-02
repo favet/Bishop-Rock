@@ -18,6 +18,10 @@ config/name="Bishop Rock"
 run/main_scene="res://scenes/main/Main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
+[autoload]
+
+CampaignState="*res://scripts/campaign/run_state.gd"
+
 [display]
 
 window/size/viewport_width=1280
