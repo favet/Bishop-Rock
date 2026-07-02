@@ -29,7 +29,7 @@ var _day_root: Control
 var _top_bar: HBoxContainer
 var _hull_fill: ColorRect
 var _hull_label: Label
-var _daylight_tokens: Array[ColorRect] = []
+var _daylight_tokens: Array[Control] = []
 var _daylight_preview_spend: int = 0
 var _zone_title: Label
 var _action_list: VBoxContainer
@@ -87,7 +87,7 @@ func _show_start_screen() -> void:
 	var list := VBoxContainer.new()
 	list.add_theme_constant_override("separation", 12)
 	box.add_child(list)
-	_card_title(list, "Bishop Rock", "Seven days of raids, repairs, food, and hard choices.")
+	_card_title(list, "Bishop Rock", "Hold the light for fifty days. Raids, repairs, food, and hard choices.")
 	var start := Button.new()
 	start.text = "Start New Campaign"
 	start.custom_minimum_size = Vector2(0, 44)
@@ -208,6 +208,7 @@ func _show_day_hub() -> void:
 	var start := Button.new()
 	start.name = "FixedStartNightButton"
 	start.custom_minimum_size = Vector2(330, 64)
+	start.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	start.add_theme_stylebox_override("normal", _panel_style(BRASS, Color(0.92, 0.78, 0.42), 2))
 	start.add_theme_stylebox_override("hover", _panel_style(Color(0.92, 0.70, 0.30), Color(1.0, 0.88, 0.55), 2))
 	start.add_theme_color_override("font_color", Color(0.07, 0.05, 0.03))
@@ -215,8 +216,10 @@ func _show_day_hub() -> void:
 	_start_night_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_start_night_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_start_night_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_start_night_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_start_night_label.add_theme_font_size_override("font_size", 19)
+	_start_night_label.add_theme_color_override("font_color", Color(0.07, 0.05, 0.03))
 	start.add_child(_start_night_label)
+	_start_night_label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	start.pressed.connect(func() -> void:
 		Engine.time_scale = 1.0
 		get_tree().reload_current_scene()
@@ -257,12 +260,18 @@ func _action_card(action: Dictionary) -> Button:
 	var rows := VBoxContainer.new()
 	rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	rows.add_theme_constant_override("separation", 3)
+	rows.position = Vector2(12, 8)
 	button.add_child(rows)
-	_card_title(rows, action["name"], action["effect"])
+	_card_title(rows, action["name"], action["effect"], false)
 	_trade_rows(rows, action.get("cost", {}), RED, "-")
 	_trade_rows(rows, action.get("gain", {}), GREEN, "+")
 	if action.has("note"):
-		_small_label(rows, action["note"], MUTED)
+		_small_label(rows, action["note"], MUTED, false)
+	# A Button doesn't grow to fit manual children — size it to the content
+	# or long cards bleed into their neighbours. Labels only know their size
+	# once themed, i.e. inside the tree, so measure at ready.
+	rows.ready.connect(func() -> void:
+		button.custom_minimum_size.y = rows.get_combined_minimum_size().y + 16.0)
 	button.pressed.connect(func() -> void:
 		_log_label.text = CampaignState.perform_action(action["id"])
 		_set_daylight_preview(0)
@@ -330,7 +339,7 @@ func _actions_for_zone(zone: String) -> Array[Dictionary]:
 		"Crafting":
 			return [
 				{"id": "sort_scrap", "name": "Sort Scrap", "effect": "Recover usable metal", "cost": {"energy_today": 1}, "gain": {"scrap": 2}},
-				{"id": "make_tool", "name": "Make Tool", "effect": "Forge one upgrade tool", "cost": {"energy_today": 1, "scrap": 5}, "gain": {"tools": 1}, "note": "Used for Lens Crank I, Rifle Breech I, and Rusty Autoturret."},
+				{"id": "make_tool", "name": "Make Tool", "effect": "Forge one upgrade tool", "cost": {"energy_today": 1, "scrap": 5}, "gain": {"tools": 1}, "note": "Used for Lens Crank I, Rifle Breech I,\nand Rusty Autoturret."},
 				{"id": "craft_mines", "name": "Craft Mines", "effect": "Prepare automatic night mines", "cost": {"energy_today": 1, "gold": 4, "scrap": 3}, "gain": {"mines": 2}},
 				{"id": "build_barricade", "name": "Build Barricade", "effect": "Reduce next crash damage", "cost": {"energy_today": 1, "wood": 4}, "gain": {"barricades": 1}},
 			]
@@ -383,10 +392,14 @@ func _zone_label(zone: String) -> String:
 
 func _hull_resource() -> PanelContainer:
 	var wrap := _resource_shell("HULL", _resource_tooltip("hull"))
-	wrap.custom_minimum_size = Vector2(170, 48)
+	wrap.custom_minimum_size = Vector2(190, 48)
+	var box := HBoxContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_theme_constant_override("separation", 6)
+	wrap.add_child(box)
+	box.add_child(ResourceIcon.new("hull", 26))
 	var rows := VBoxContainer.new()
-	rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	wrap.add_child(rows)
+	box.add_child(rows)
 	_hull_label = Label.new()
 	_hull_label.text = "HULL %d/%d" % [CampaignState.hull, CampaignState.max_hull]
 	_hull_label.add_theme_color_override("font_color", TEXT)
@@ -416,10 +429,9 @@ func _daylight_resource() -> PanelContainer:
 	tokens.name = "DaylightTokens"
 	tokens.add_theme_constant_override("separation", 4)
 	rows.add_child(tokens)
-	for i in CampaignState.energy_max:
-		var token := ColorRect.new()
+	for i in maxi(CampaignState.energy_max, CampaignState.energy_today):
+		var token := ResourceIcon.new("daylight", 20)
 		token.name = "DaylightToken%d" % i
-		token.custom_minimum_size = Vector2(18, 14)
 		tokens.add_child(token)
 		_daylight_tokens.append(token)
 	return wrap
@@ -431,14 +443,7 @@ func _resource_badge(key: String, value: String) -> PanelContainer:
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_theme_constant_override("separation", 6)
 	wrap.add_child(box)
-	var badge := Label.new()
-	badge.text = _short_resource(key)
-	badge.custom_minimum_size = Vector2(30, 26)
-	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	badge.add_theme_color_override("font_color", Color(0.08, 0.06, 0.03))
-	badge.add_theme_stylebox_override("normal", _panel_style(BRASS, BRASS_DARK, 1))
-	box.add_child(badge)
+	box.add_child(ResourceIcon.new(ResourceIcon.kind_for(key), 26))
 	var label := Label.new()
 	label.text = value
 	label.add_theme_font_size_override("font_size", 18)
@@ -461,11 +466,11 @@ func _update_daylight_tokens() -> void:
 		var token := _daylight_tokens[i]
 		var spent_preview := i >= CampaignState.energy_today - _daylight_preview_spend and i < CampaignState.energy_today
 		if i < CampaignState.energy_today and not spent_preview:
-			token.color = BRASS
+			token.modulate = Color.WHITE
 		elif spent_preview:
-			token.color = Color(BRASS.r, BRASS.g, BRASS.b, 0.28)
+			token.modulate = Color(1, 1, 1, 0.28)
 		else:
-			token.color = Color(0.14, 0.13, 0.11, 0.8)
+			token.modulate = Color(0.5, 0.48, 0.44, 0.7)
 
 func _base_card_button() -> Button:
 	var button := Button.new()
@@ -476,13 +481,13 @@ func _base_card_button() -> Button:
 	button.add_theme_stylebox_override("hover", _panel_style(PANEL_HOVER, BRASS, 2))
 	return button
 
-func _card_title(parent: VBoxContainer, title_text: String, subtitle: String) -> void:
+func _card_title(parent: VBoxContainer, title_text: String, subtitle: String, wrap: bool = true) -> void:
 	var title := Label.new()
 	title.text = title_text.to_upper()
 	title.add_theme_font_size_override("font_size", 17)
 	title.add_theme_color_override("font_color", TEXT)
 	parent.add_child(title)
-	_small_label(parent, subtitle, MUTED)
+	_small_label(parent, subtitle, MUTED, wrap)
 
 func _trade_rows(parent: VBoxContainer, values: Dictionary, color: Color, prefix: String) -> void:
 	for key in values.keys():
@@ -498,13 +503,9 @@ func _resource_row(parent: VBoxContainer, prefix: String, key: String, amount: i
 	sign.custom_minimum_size = Vector2(16, 0)
 	sign.add_theme_color_override("font_color", color)
 	row.add_child(sign)
-	var badge := Label.new()
-	badge.text = _short_resource(key)
-	badge.custom_minimum_size = Vector2(34, 20)
-	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	badge.add_theme_color_override("font_color", Color(0.08, 0.06, 0.03))
-	badge.add_theme_stylebox_override("normal", _panel_style(BRASS, BRASS_DARK, 1))
-	row.add_child(badge)
+	var kind := ResourceIcon.kind_for(key)
+	if not kind.is_empty():
+		row.add_child(ResourceIcon.new(kind, 20))
 	var label := Label.new()
 	label.text = "%s %d" % [_display_resource_name(key), amount]
 	label.add_theme_color_override("font_color", color)
@@ -520,10 +521,14 @@ func _have_need_row(parent: VBoxContainer, key: String, have: int, need: int) ->
 	label.add_theme_color_override("font_color", color)
 	row.add_child(label)
 
-func _small_label(parent: Control, text: String, color: Color) -> void:
+func _small_label(parent: Control, text: String, color: Color, wrap: bool = true) -> void:
 	var label := Label.new()
 	label.text = text
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# Autowrap labels report a near-zero minimum width, so inside an HBox or a
+	# manually laid-out card they collapse to one letter per line. Only wrap
+	# where a container gives the label real width.
+	if wrap:
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.add_theme_color_override("font_color", color)
 	parent.add_child(label)
 
@@ -550,11 +555,13 @@ func _defense_strip() -> PanelContainer:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
 	wrap.add_child(row)
-	_small_label(row, "TONIGHT'S DEFENSES", BRASS)
-	_small_label(row, "Mines %d" % CampaignState.mines, TEXT)
-	_small_label(row, "Barricades %d" % CampaignState.barricades, TEXT)
+	_small_label(row, "TONIGHT'S DEFENSES", BRASS, false)
+	row.add_child(ResourceIcon.new("mines", 20))
+	_small_label(row, "Mines %d" % CampaignState.mines, TEXT, false)
+	row.add_child(ResourceIcon.new("barricades", 20))
+	_small_label(row, "Barricades %d" % CampaignState.barricades, TEXT, false)
 	if not CampaignState.scouted_profile.is_empty():
-		_small_label(row, "Scout: %s" % CampaignState.scouted_profile["profile_name"], MUTED)
+		_small_label(row, "Scout: %s" % CampaignState.scouted_profile["profile_name"], MUTED, false)
 	return wrap
 
 func _daylight_cost(cost: Dictionary) -> int:
@@ -629,30 +636,6 @@ func _display_resource_name(key: String) -> String:
 		"day":
 			return "Day"
 	return key.capitalize()
-
-func _short_resource(key: String) -> String:
-	match key:
-		"energy_today", "tomorrow_daylight", "daylight_work":
-			return "DL"
-		"gold":
-			return "AU"
-		"wood":
-			return "WD"
-		"scrap":
-			return "SC"
-		"food":
-			return "FD"
-		"tools":
-			return "TL"
-		"mines":
-			return "MN"
-		"barricades":
-			return "BR"
-		"hull":
-			return "HL"
-		"day":
-			return "DAY"
-	return key.substr(0, mini(3, key.length())).to_upper()
 
 func _repair_hint() -> String:
 	var missing := CampaignState.max_hull - CampaignState.hull

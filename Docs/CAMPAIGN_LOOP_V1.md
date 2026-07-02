@@ -1,6 +1,6 @@
 # Campaign Loop v1
 
-Campaign v1 wraps Night Board v0 with a seven-day survival loop:
+Campaign v1 wraps Night Board v0 with a long-haul survival loop (50-day target; raid pressure ramps by day and plateaus after day 15 pending later tuning):
 
 Night raid -> dawn summary -> visual day hub -> spend Daylight/resources -> next night.
 
@@ -73,4 +73,4 @@ Applied effects:
 
 No trader, sector placement UI, breakwaters, decoys, storms, ammo types, radar inset, advanced events, or art pass in this slice.
 
-UI art still deferred: resource badges are stamped two-letter brass chips and Daylight tokens are flat brass rectangles — cohesive placeholders, no emoji. Replace with drawn brass icons (sun/lens tokens, gauge-style hull) in a later art pass.
+UI art: resources use `ui/resource_icon.gd`, a code-drawn brass icon set (coin, planks, riveted shard, fish, sun, lighthouse, hammer, naval mine, crossed planks, sunrise) sharing one plate/rim/palette treatment. Daylight tokens are the sun icon; ghost/spent states are modulate-based. Cohesive, no emoji, no external assets. A real texture/art pass can replace the class wholesale later.

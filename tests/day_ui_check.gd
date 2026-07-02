@@ -30,19 +30,19 @@ func _ready() -> void:
 	# Daylight is tokenized, one token per point of max energy.
 	assert(main._daylight_tokens.size() == CampaignState.energy_max)
 	for token in main._daylight_tokens:
-		assert(token.color.a > 0.9, "tokens must start solid")
+		assert(token.modulate.a > 0.9, "tokens must start solid")
 
 	# Hover preview ghosts exactly the hovered cost, then restores.
 	for spend in [1, 2]:
 		main._set_daylight_preview(spend)
 		var ghosted := 0
 		for token in main._daylight_tokens:
-			if token.color.a < 0.5 and token.color.r == main.BRASS.r:
+			if token.modulate.a < 0.5:
 				ghosted += 1
 		assert(ghosted == spend, "preview must ghost exactly %d tokens" % spend)
 	main._set_daylight_preview(0)
 	for i in CampaignState.energy_today:
-		assert(main._daylight_tokens[i].color.a > 0.9, "tokens must restore after hover")
+		assert(main._daylight_tokens[i].modulate.a > 0.9, "tokens must restore after hover")
 
 	# Hull bar fill matches the label's own denominator (79/85, not /100).
 	var expected := 140.0 * 79.0 / 85.0
@@ -58,6 +58,15 @@ func _ready() -> void:
 		main._select_zone(zone)
 		await get_tree().process_frame
 		assert(start.global_position == fixed_pos, "Start Night moved on zone switch")
+		# Action cards must be tall enough for their manually laid-out content.
+		for card in main._action_list.get_children():
+			if card is Button:
+				for content in card.get_children():
+					if content is VBoxContainer:
+						var needed: float = content.get_combined_minimum_size().y + content.position.y
+						if card.custom_minimum_size.y < needed:
+							print("OVERFLOW %s: min=%.1f needed=%.1f size=%.1f" % [zone, card.custom_minimum_size.y, needed, card.size.y])
+						assert(card.custom_minimum_size.y >= needed, "card content overflows in %s" % zone)
 
 	# Unaffordable projects stay inspectable: card exists, button not disabled.
 	CampaignState.gold = 0
@@ -70,6 +79,14 @@ func _ready() -> void:
 				found_cannot_start = true
 				assert(not button.disabled, "unaffordable project must stay clickable")
 	assert(found_cannot_start, "expected an unaffordable project card")
+
+	# Windowed runs also drop a screenshot for eyeballing the layout.
+	if DisplayServer.get_name() != "headless":
+		CampaignState.gold = 21
+		main._refresh_day_ui()
+		main._select_zone("Repairs")
+		await get_tree().create_timer(0.4).timeout
+		get_viewport().get_texture().get_image().save_png("user://day_ui_check.png")
 
 	print("day_ui_check: PASS")
 	get_tree().quit(0)
