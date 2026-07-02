@@ -86,6 +86,10 @@ func _on_boat_died(boat: Boat) -> void:
 	gold_earned += reward
 	if campaign_mode:
 		CampaignState.gold += reward
+		CampaignState.run_kills += 1
+		CampaignState.run_gold_earned += reward
+		if boat.killed_by_perfect:
+			CampaignState.run_perfects += 1
 	_float_text(boat.global_position, label, Color(1.0, 0.85, 0.25))
 
 func _on_shot_hit(boat: Boat, quality: int, killed: bool) -> void:

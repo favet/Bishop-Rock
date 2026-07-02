@@ -93,6 +93,10 @@ var clean_lens_active: bool
 var last_night_stats: Dictionary
 var daily_caps: Dictionary
 var scouted_profile: Dictionary
+# Whole-run tallies for the death score screen.
+var run_kills: int
+var run_gold_earned: int
+var run_perfects: int
 
 func _ready() -> void:
 	reset_campaign()
@@ -122,6 +126,9 @@ func reset_campaign(seed_value: int = -1) -> void:
 	last_night_stats = {}
 	daily_caps = {}
 	scouted_profile = {}
+	run_kills = 0
+	run_gold_earned = 0
+	run_perfects = 0
 	changed.emit()
 
 func start_day() -> void:
@@ -384,6 +391,24 @@ func _advance_crops() -> void:
 func _open_farm_plots() -> int:
 	return farm_plots - active_crops.size()
 
+const RECORDS_PATH := "user://records.cfg"
+
+## Persist the run's result; returns {best_nights, new_record, total_runs}
+## for the death screen. Call exactly once per lost run.
+func record_death() -> Dictionary:
+	var nights_held := day - 1
+	var cfg := ConfigFile.new()
+	cfg.load(RECORDS_PATH)  # missing file on first run is fine
+	var best: int = cfg.get_value("records", "best_nights", 0)
+	var total_runs: int = cfg.get_value("records", "total_runs", 0) + 1
+	var new_record := nights_held > best
+	if new_record:
+		best = nights_held
+	cfg.set_value("records", "best_nights", best)
+	cfg.set_value("records", "total_runs", total_runs)
+	cfg.save(RECORDS_PATH)
+	return {"best_nights": best, "new_record": new_record, "total_runs": total_runs}
+
 ## Fresh RNG seeded from (run seed, day): the same night replays identically
 ## after a restart, and a typed seed reproduces a whole run.
 func night_rng() -> RandomNumberGenerator:
@@ -431,15 +456,18 @@ func raid_profile() -> Dictionary:
 			"first_spawn_delay": 1.0,
 			"use_v0_hazards": false,
 		}
+	# Day 15+: unbounded multiplicative growth. There is no final day — the
+	# sea always wins eventually; the score is how long you held it off.
+	var over := day - 15
 	return {
-		"profile_name": "Night Board pressure",
-		"wave_size": mini(9 + int((day - 15) / 2), 13),
-		"fast_weight": 0.25,
-		"heavy_weight": 0.12,
-		"max_simultaneous": 3,
-		"speed_scale": 1.0,
-		"start_interval": 2.6,
-		"min_interval": 1.5,
+		"profile_name": "The sea rising" if over < 10 else "The sea furious",
+		"wave_size": 9 + over / 2,
+		"fast_weight": minf(0.25 + 0.012 * over, 0.5),
+		"heavy_weight": minf(0.12 + 0.010 * over, 0.4),
+		"max_simultaneous": 3 + over / 6,
+		"speed_scale": pow(1.02, over),
+		"start_interval": maxf(2.6 * pow(0.985, over), 1.2),
+		"min_interval": maxf(1.5 * pow(0.985, over), 0.7),
 		"first_spawn_delay": 1.0,
 		"use_v0_hazards": false,
 	}

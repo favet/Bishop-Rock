@@ -58,6 +58,10 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if Input.is_action_just_pressed("restart"):
 		Engine.time_scale = 1.0
+		# A lost run is over — R starts a fresh campaign at the title screen,
+		# not a free retry of the failed night.
+		if _board.game_over:
+			CampaignState.reset_campaign()
 		get_tree().reload_current_scene()
 	elif Input.is_action_just_pressed("pause_slow") and not _frozen:
 		_slowed = not _slowed

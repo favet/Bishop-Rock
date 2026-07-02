@@ -49,8 +49,16 @@ func _process(delta: float) -> void:
 	_update_damage_feedback(delta)
 
 	if _board.game_over and not _game_over.visible:
-		_game_over_label.text = "LIGHTHOUSE LOST\n\nSurvived %ds - %d boats sunk\nSeed %d\n\nPress R to restart" % [
-			int(_board.elapsed), _board.kills, CampaignState.run_seed]
+		var record: Dictionary = CampaignState.record_death()
+		var nights_held: int = CampaignState.day - 1
+		var lines := "THE LIGHT HAS FALLEN\n\nNights held: %d\nBoats sunk: %d\nPerfect kills: %d\nShillings earned: %d\nSeed %d\n\nBest: %d nights across %d runs" % [
+			nights_held, CampaignState.run_kills, CampaignState.run_perfects,
+			CampaignState.run_gold_earned, CampaignState.run_seed,
+			int(record["best_nights"]), int(record["total_runs"])]
+		if record["new_record"]:
+			lines += "\nNEW RECORD"
+		lines += "\n\nPress R for a new campaign"
+		_game_over_label.text = lines
 		_game_over.visible = true
 
 func _update_health(delta: float) -> void:
