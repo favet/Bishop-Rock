@@ -174,115 +174,154 @@ func _display_name(key: String) -> String:
 			return "Parts"
 	return key.capitalize()
 
-func perform_action(action_id: String) -> String:
+## Every action's definition lives here and only here — the day UI renders
+## from this table and perform_action() executes from it, so a price can
+## never drift between what's shown and what's charged.
+const ACTIONS := {
+	"patch_hull": {
+		"name": "Patch Damage", "zone": "Repairs", "effect": "Repair lighthouse hull",
+		"cost": {"energy_today": 1, "gold": 3, "wood": 2}, "gain": {"hull": 10},
+		"log": "Patched hull.",
+	},
+	"full_repair": {
+		"name": "Full Repair", "zone": "Repairs", "effect": "Major hull repair",
+		"cost": {"energy_today": 2, "gold": 6, "wood": 4}, "gain": {"hull": 22},
+		"log": "Repairs completed.",
+	},
+	"clean_lens": {
+		"name": "Clean Lens", "zone": "Repairs", "effect": "Easier beam handling tonight",
+		"cost": {"energy_today": 1}, "gain": {"handling": 1},
+		"log": "Lens cleaned for tonight.",
+	},
+	"sort_scrap": {
+		"name": "Sort Salvage", "zone": "Crafting", "effect": "Recover usable iron",
+		"cost": {"energy_today": 1}, "gain": {"scrap": 2},
+		"log": "Salvaged +2 iron.",
+	},
+	"make_tool": {
+		"name": "Machine a Part", "zone": "Crafting", "effect": "Fabricate one precision part",
+		"cost": {"energy_today": 1, "scrap": 5}, "gain": {"tools": 1},
+		"log": "Machined a part.",
+		"note": "Needed for Lens Crank I, Rifle Breech I,\nand Rusty Autoturret.",
+	},
+	"craft_mines": {
+		"name": "Craft Mines", "zone": "Crafting", "effect": "Prepare automatic night mines",
+		"cost": {"energy_today": 1, "gold": 4, "scrap": 3}, "gain": {"mines": 2},
+		"log": "Crafted 2 mines.",
+	},
+	"build_barricade": {
+		"name": "Build Barricade", "zone": "Crafting", "effect": "Reduce next crash damage",
+		"cost": {"energy_today": 1, "wood": 4}, "gain": {"barricades": 1},
+		"log": "Built a barricade.",
+	},
+	"gather_driftwood": {
+		"name": "Gather Driftwood", "zone": "Supplies", "effect": "Comb the shore for timber",
+		"cost": {"energy_today": 1}, "gain": {"wood": 4},
+		"log": "Gathered +4 timber.",
+	},
+	"fish": {
+		"name": "Fish", "zone": "Supplies", "effect": "Rations and a few shillings",
+		"cost": {"energy_today": 1}, "gain": {"food": 2, "gold": 2},
+		"log": "Caught rations and sold the extra fish.",
+	},
+	"dive_wreckage": {
+		"name": "Dive Wreckage", "zone": "Supplies", "effect": "Salvage below the dock",
+		"cost": {"energy_today": 2}, "gain": {"wood": 2, "scrap": 3},
+		"log": "Recovered timber and iron.",
+		"daily_cap": "dive_wreckage", "note": "Once per day.",
+	},
+	"plant_potatoes": {
+		"name": "Plant Potatoes", "zone": "Supplies", "effect": "Matures after 3 days",
+		"cost": {"energy_today": 1, "food": 1}, "gain": {"crop": 1},
+		"log": "Potatoes planted.",
+	},
+	"harvest_potatoes": {
+		"name": "Harvest Potatoes", "zone": "Supplies", "effect": "Free harvest from mature plots",
+		"cost": {}, "gain": {"food": 5},
+		"log": "Harvested potatoes.",
+	},
+	"rest": {
+		"name": "Rest", "zone": "Rest", "effect": "Save strength for tomorrow",
+		"cost": {"energy_today": 1}, "gain": {"tomorrow_daylight": 1},
+		"log": "Tomorrow Daylight +1.",
+		"daily_cap": "rest", "note": "Once per day.",
+	},
+	"cook_meal": {
+		"name": "Cook Meal", "zone": "Rest", "effect": "Better tomorrow tempo",
+		"cost": {"energy_today": 1, "food": 2}, "gain": {"tomorrow_daylight": 2},
+		"log": "Tomorrow Daylight +2.",
+		"daily_cap": "cook_meal", "note": "Once per day.",
+	},
+	"scout_raid": {
+		"name": "Scout Raid", "zone": "Rest", "effect": "Preview tonight's threat",
+		"cost": {"energy_today": 1, "gold": 5}, "gain": {"forecast": 1},
+		"log": "Raid scouted.",
+		"daily_cap": "scout_raid",
+	},
+}
+
+## Gain with project modifiers applied — the UI shows this too, so a
+## completed project's bonus is visible on the card, not a surprise.
+func action_gain(action_id: String) -> Dictionary:
+	var gain: Dictionary = ACTIONS[action_id]["gain"].duplicate()
 	match action_id:
 		"patch_hull":
-			if not spend({"energy_today": 1, "gold": 3, "wood": 2}):
-				return "Missing %s." % missing_text({"energy_today": 1, "gold": 3, "wood": 2})
-			hull = mini(max_hull, hull + 10 + (2 if completed_projects.has("patch_frame") else 0))
-			changed.emit()
-			return "Patched hull."
-		"full_repair":
-			if not spend({"energy_today": 2, "gold": 6, "wood": 4}):
-				return "Missing %s." % missing_text({"energy_today": 2, "gold": 6, "wood": 4})
-			hull = mini(max_hull, hull + 22)
-			changed.emit()
-			return "Repairs completed."
-		"clean_lens":
-			if not spend({"energy_today": 1}):
-				return "Need 1 Daylight."
-			clean_lens_active = true
-			changed.emit()
-			return "Lens cleaned for tonight."
-		"sort_scrap":
-			if not spend({"energy_today": 1}):
-				return "Need 1 Daylight."
-			scrap += 2
-			changed.emit()
-			return "Salvaged +2 iron."
-		"make_tool":
-			if not spend({"energy_today": 1, "scrap": 5}):
-				return "Missing %s." % missing_text({"energy_today": 1, "scrap": 5})
-			tools += 1
-			changed.emit()
-			return "Machined a part."
-		"craft_mines":
-			if not spend({"energy_today": 1, "gold": 4, "scrap": 3}):
-				return "Missing %s." % missing_text({"energy_today": 1, "gold": 4, "scrap": 3})
-			mines += 2
-			changed.emit()
-			return "Crafted 2 mines."
-		"build_barricade":
-			if not spend({"energy_today": 1, "wood": 4}):
-				return "Missing %s." % missing_text({"energy_today": 1, "wood": 4})
-			barricades += 1
-			changed.emit()
-			return "Built a barricade."
-		"gather_driftwood":
-			if not spend({"energy_today": 1}):
-				return "Need 1 Daylight."
-			wood += 4
-			changed.emit()
-			return "Gathered +4 timber."
-		"fish":
-			if not spend({"energy_today": 1}):
-				return "Need 1 Daylight."
-			food += 2
-			gold += 2
-			changed.emit()
-			return "Caught food and sold extra fish."
-		"dive_wreckage":
-			if daily_caps.get("dive_wreckage", false):
-				return "Dive wreckage is done for today."
-			if not spend({"energy_today": 2}):
-				return "Need 2 Daylight."
-			daily_caps["dive_wreckage"] = true
-			wood += 2
-			scrap += 3
-			changed.emit()
-			return "Recovered timber and iron."
+			if completed_projects.has("patch_frame"):
+				gain["hull"] += 2
+		"harvest_potatoes":
+			if completed_projects.has("garden_bed_prep"):
+				gain["food"] += 1
+	return gain
+
+func perform_action(action_id: String) -> String:
+	var action: Dictionary = ACTIONS.get(action_id, {})
+	if action.is_empty():
+		return "Unknown action."
+	var cap: String = action.get("daily_cap", "")
+	if not cap.is_empty() and daily_caps.get(cap, false):
+		return "%s is done for today." % action["name"]
+	match action_id:  # preconditions a cost dict can't express
 		"plant_potatoes":
 			if _open_farm_plots() <= 0:
 				return "No open farm plot."
-			if not spend({"energy_today": 1, "food": 1}):
-				return "Missing %s." % missing_text({"energy_today": 1, "food": 1})
-			active_crops.append({"crop": "potatoes", "days_left": 3})
-			changed.emit()
-			return "Potatoes planted."
 		"harvest_potatoes":
-			for i in active_crops.size():
-				if int(active_crops[i].get("days_left", 0)) <= 0:
-					active_crops.remove_at(i)
-					food += 5 + (1 if completed_projects.has("garden_bed_prep") else 0)
-					changed.emit()
-					return "Harvested potatoes."
-			return "No mature potatoes."
-		"rest":
-			return _add_tomorrow_energy("rest", 1, {})
-		"cook_meal":
-			return _add_tomorrow_energy("cook_meal", 2, {"food": 2})
-		"scout_raid":
-			if daily_caps.get("scout_raid", false):
-				return "Raid already scouted."
-			if not spend({"energy_today": 1, "gold": 5}):
-				return "Missing %s." % missing_text({"energy_today": 1, "gold": 5})
-			daily_caps["scout_raid"] = true
-			scouted_profile = raid_profile()
-			changed.emit()
-			return "Raid scouted: about %d boats." % int(scouted_profile.get("wave_size", 0))
-	return "Unknown action."
-
-func _add_tomorrow_energy(cap_id: String, amount: int, cost: Dictionary) -> String:
-	if daily_caps.get(cap_id, false):
-		return "%s is already done today." % cap_id.capitalize()
-	var full_cost := cost.duplicate()
-	full_cost["energy_today"] = 1
-	if not spend(full_cost):
-		return "Missing %s." % missing_text(full_cost)
-	daily_caps[cap_id] = true
-	tomorrow_energy_bonus = mini(tomorrow_energy_bonus + amount, 2)
+			if _mature_crop_index() < 0:
+				return "No mature potatoes."
+	var cost: Dictionary = action["cost"]
+	if not spend(cost):
+		return "Missing %s." % missing_text(cost)
+	if not cap.is_empty():
+		daily_caps[cap] = true
+	if action_id == "harvest_potatoes":
+		active_crops.remove_at(_mature_crop_index())
+	var gain := action_gain(action_id)
+	for key in gain.keys():
+		_apply_gain(key, int(gain[key]))
 	changed.emit()
-	return "Tomorrow Daylight +%d." % amount
+	if action_id == "scout_raid":
+		return "Raid scouted: about %d boats." % int(scouted_profile.get("wave_size", 0))
+	return action["log"]
+
+func _apply_gain(key: String, amount: int) -> void:
+	match key:
+		"hull":
+			hull = mini(max_hull, hull + amount)
+		"handling":
+			clean_lens_active = true
+		"crop":
+			active_crops.append({"crop": "potatoes", "days_left": 3})
+		"tomorrow_daylight":
+			tomorrow_energy_bonus = mini(tomorrow_energy_bonus + amount, 2)
+		"forecast":
+			scouted_profile = raid_profile()
+		_:
+			set(key, int(get(key)) + amount)
+
+func _mature_crop_index() -> int:
+	for i in active_crops.size():
+		if int(active_crops[i].get("days_left", 0)) <= 0:
+			return i
+	return -1
 
 func start_project(project_id: String) -> String:
 	if completed_projects.has(project_id):

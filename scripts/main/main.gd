@@ -340,39 +340,29 @@ func _project_card(project_id: String) -> VBoxContainer:
 	box.add_child(button)
 	return box
 
+## Cards render straight from CampaignState.ACTIONS — one source of truth
+## for both display and spend. Only presentation tweaks happen here.
 func _actions_for_zone(zone: String) -> Array[Dictionary]:
-	match zone:
-		"Repairs":
-			return [
-				{"id": "patch_hull", "name": "Patch Damage", "effect": "Repair lighthouse hull", "cost": {"energy_today": 1, "gold": 3, "wood": 2}, "gain": {"hull": 10 + (2 if CampaignState.completed_projects.has("patch_frame") else 0)}},
-				{"id": "full_repair", "name": "Full Repair", "effect": "Major hull repair", "cost": {"energy_today": 2, "gold": 6, "wood": 4}, "gain": {"hull": 22}},
-				{"id": "clean_lens", "name": "Clean Lens", "effect": "Easier beam handling tonight", "cost": {"energy_today": 1}, "gain": {"handling": 1}},
-			]
-		"Crafting":
-			return [
-				{"id": "sort_scrap", "name": "Sort Salvage", "effect": "Recover usable iron", "cost": {"energy_today": 1}, "gain": {"scrap": 2}},
-				{"id": "make_tool", "name": "Machine a Part", "effect": "Fabricate one precision part", "cost": {"energy_today": 1, "scrap": 5}, "gain": {"tools": 1}, "note": "Needed for Lens Crank I, Rifle Breech I,\nand Rusty Autoturret."},
-				{"id": "craft_mines", "name": "Craft Mines", "effect": "Prepare automatic night mines", "cost": {"energy_today": 1, "gold": 4, "scrap": 3}, "gain": {"mines": 2}},
-				{"id": "build_barricade", "name": "Build Barricade", "effect": "Reduce next crash damage", "cost": {"energy_today": 1, "wood": 4}, "gain": {"barricades": 1}},
-			]
-		"Supplies":
-			return [
-				{"id": "gather_driftwood", "name": "Gather Driftwood", "effect": "Comb the shore for timber", "cost": {"energy_today": 1}, "gain": {"wood": 4}},
-				{"id": "fish", "name": "Fish", "effect": "Rations and a few shillings", "cost": {"energy_today": 1}, "gain": {"food": 2, "gold": 2}},
-				{"id": "dive_wreckage", "name": "Dive Wreckage", "effect": "Salvage below the dock", "cost": {"energy_today": 2}, "gain": {"wood": 2, "scrap": 3}, "note": "Once per day."},
-				{"id": "plant_potatoes", "name": "Plant Potatoes", "effect": "Matures after 3 days", "cost": {"energy_today": 1, "food": 1}, "gain": {"crop": 1}},
-				{"id": "harvest_potatoes", "name": "Harvest Potatoes", "effect": "Free harvest from mature plots", "cost": {}, "gain": {"food": 5 + (1 if CampaignState.completed_projects.has("garden_bed_prep") else 0)}},
-			]
-		"Rest":
-			var scout_effect := "Preview tonight's threat"
-			if not CampaignState.scouted_profile.is_empty():
-				scout_effect = "%s, about %d boats" % [CampaignState.scouted_profile["profile_name"], int(CampaignState.scouted_profile["wave_size"])]
-			return [
-				{"id": "rest", "name": "Rest", "effect": "Save strength for tomorrow", "cost": {"energy_today": 1}, "gain": {"tomorrow_daylight": 1}, "note": "Once per day."},
-				{"id": "cook_meal", "name": "Cook Meal", "effect": "Better tomorrow tempo", "cost": {"energy_today": 1, "food": 2}, "gain": {"tomorrow_daylight": 2}, "note": "Once per day."},
-				{"id": "scout_raid", "name": "Scout Raid", "effect": scout_effect, "cost": {"energy_today": 1, "gold": 5}, "gain": {"forecast": 1}},
-			]
-	return []
+	var out: Array[Dictionary] = []
+	for id in CampaignState.ACTIONS:
+		var def: Dictionary = CampaignState.ACTIONS[id]
+		if def["zone"] != zone:
+			continue
+		var entry := {
+			"id": id,
+			"name": def["name"],
+			"effect": def["effect"],
+			"cost": def["cost"],
+			"gain": CampaignState.action_gain(id),
+		}
+		if def.has("note"):
+			entry["note"] = def["note"]
+		if id == "scout_raid" and not CampaignState.scouted_profile.is_empty():
+			entry["effect"] = "%s, about %d boats" % [
+				CampaignState.scouted_profile["profile_name"],
+				int(CampaignState.scouted_profile["wave_size"])]
+		out.append(entry)
+	return out
 
 func _refresh_day_ui() -> void:
 	if _top_bar == null:

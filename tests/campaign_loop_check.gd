@@ -9,7 +9,7 @@ func _init() -> void:
 	assert(state.raid_profile()["max_simultaneous"] == 1)
 	assert(not state.turret_unlocked)
 	var gold_before := state.gold
-	assert(state.perform_action("gather_driftwood").contains("wood"))
+	assert(state.perform_action("gather_driftwood").contains("timber"))
 	assert(state.wood == 12)
 	assert(state.start_project("greased_crank").contains("Started"))
 	assert(state.work_project("greased_crank").contains("Completed"))
