@@ -138,7 +138,31 @@ func start_day() -> void:
 	tomorrow_energy_bonus = 0
 	scouted_profile = {}
 	day += 1
+	_log_telemetry("dawn")
 	changed.emit()
+
+const TELEMETRY_PATH := "user://runs.csv"
+
+## One CSV row per dawn and per death: resource snapshot + last night's
+## result. After a handful of runs this answers "which action dominates"
+## and "which day kills people" with data instead of debate.
+## ponytail: per-zone Daylight spend not tracked; add a per-action counter
+## if resource deltas alone can't explain a dominant strategy.
+func _log_telemetry(event: String) -> void:
+	var file: FileAccess
+	if FileAccess.file_exists(TELEMETRY_PATH):
+		file = FileAccess.open(TELEMETRY_PATH, FileAccess.READ_WRITE)
+		file.seek_end()
+	else:
+		file = FileAccess.open(TELEMETRY_PATH, FileAccess.WRITE)
+		file.store_line("seed,day,event,hull,max_hull,gold,wood,scrap,food,tools,mines,barricades,night_kills,night_crashed,night_gold")
+	if file == null:
+		return
+	file.store_line("%d,%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d" % [
+		run_seed, day, event, hull, max_hull, gold, wood, scrap, food, tools,
+		mines, barricades, int(last_night_stats.get("kills", 0)),
+		int(last_night_stats.get("crashed", 0)), int(last_night_stats.get("gold_earned", 0))])
+	file.close()
 
 func set_night_result(stats: Dictionary) -> void:
 	last_night_stats = stats.duplicate(true)
@@ -407,6 +431,7 @@ func record_death() -> Dictionary:
 	cfg.set_value("records", "best_nights", best)
 	cfg.set_value("records", "total_runs", total_runs)
 	cfg.save(RECORDS_PATH)
+	_log_telemetry("death")
 	return {"best_nights": best, "new_record": new_record, "total_runs": total_runs}
 
 ## Fresh RNG seeded from (run seed, day): the same night replays identically
