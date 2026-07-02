@@ -50,8 +50,7 @@ func _process(delta: float) -> void:
 		text["age"] = float(text["age"]) + delta
 		text["position"] = text["position"] + Vector2(0, -22) * delta
 	_floating_texts = _floating_texts.filter(func(t: Dictionary) -> bool: return float(t["age"]) < 1.0)
-	if not _floating_texts.is_empty():
-		queue_redraw()
+	queue_redraw()  # floats + lit-boat bounties both move every frame
 
 ## Boats no longer in play, one way or another — sunk or rammed home. With
 ## spawner.remaining_to_spawn(), (wave_size - resolved_count()) always equals
@@ -198,6 +197,14 @@ func _float_text(pos: Vector2, text: String, color: Color, size: int = 16) -> vo
 
 func _draw() -> void:
 	var font := ThemeDB.fallback_font
+	# Bounty on lit boats: target value is part of the aiming decision —
+	# a heavy is worth leaving two skiffs alone for.
+	for node in get_tree().get_nodes_in_group("boats"):
+		var boat := node as Boat
+		if boat.vis_state == Boat.VisState.ILLUMINATED:
+			draw_string(font, to_local(boat.global_position) + Vector2(-10, -16),
+				"%ds" % _base_reward(boat), HORIZONTAL_ALIGNMENT_CENTER, 40, 12,
+				Color(1.0, 0.85, 0.25, 0.8))
 	for item in _floating_texts:
 		var t := float(item["age"])
 		var color: Color = item["color"]
