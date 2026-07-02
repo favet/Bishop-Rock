@@ -72,8 +72,18 @@ Applied effects:
 - Reinforced Hull I raises and heals max hull.
 - Rusty Autoturret enables the existing weak turret.
 
+## Systems added since v1
+
+- Seeded runs: `reset_campaign(seed)` — spawner RNG is `hash([run_seed, day])`, so nights replay deterministically and seeds are shareable (typed on the start screen, shown at death).
+- Endless scaling: past day 15 pressure grows without bound; every run ends. Death screen shows nights held, kills, perfects, shillings, seed, and the persisted best (`user://records.cfg`; mercy runs on a separate ladder).
+- Salvage economy: crashes wash up timber, perfect kills leave iron crates — both sweeten the day's single Dive Wreckage.
+- Daily flavor: one seeded opportunity action from `OPPORTUNITIES` (shown in its zone + pointed at from the defenses strip) and weather (`WEATHERS`: clear/fog/swell) affecting beam cone and boat speed, forecast on Start Night.
+- Audio: `Sfx` autoload + synthesized WAVs from `tools/gen_audio.py` (see DESIGN_REVIEW #8).
+- Keeper's Mercy assist toggle; perfect-kill juice (hit-stop, zoom pulse, 30px float text); lit boats show their bounty; telemetry CSV per dawn/death (`user://runs.csv`); first three dawns carry keeper's-note hints.
+- Balance guard: `tests/policy_sim_check.gd` asserts no single-action day policy keeps up with balanced play and that scaling ends every run.
+
 ## Deferred
 
-No trader, sector placement UI, breakwaters, decoys, storms, ammo types, radar inset, advanced events, or art pass in this slice.
+No trader, sector placement UI, breakwaters, decoys, ammo types, radar inset, advanced events, save/load (next priority), or art pass in this slice.
 
 UI art: resources use `ui/resource_icon.gd`, a code-drawn brass icon set (coin, planks, riveted shard, fish, sun, lighthouse, hammer, naval mine, crossed planks, sunrise) sharing one plate/rim/palette treatment. Daylight tokens are the sun icon; ghost/spent states are modulate-based. Cohesive, no emoji, no external assets. A real texture/art pass can replace the class wholesale later.

@@ -4,6 +4,14 @@ Honest assessment of the concept as built, and prioritized recommendations.
 Frame: perpetual fight — every run ends in a lost lighthouse; the score is
 how long you held and what you sank.
 
+**Implementation status (July 2026):** all items below are DONE except —
+2-of-3 project offering (deferred: playtest the current project list first),
+overcharge shot and mine ring placement (skipped: the existing
+NORMAL/CHARGED/PERFECT/misfire bands already carry the risk curve, and mine
+rings add a knob without tension), and save/load (next priority, not
+started). Balance numbers from the policy sim: all-fish dies night 11,
+balanced play holds ~26.
+
 ## What already works
 
 - Two-phase loop (tense night / planning day) is a proven spine — Kingdom,
