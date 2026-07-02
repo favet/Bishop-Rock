@@ -70,6 +70,7 @@ const START_PROJECTS := {
 }
 
 var run_seed: int
+var mercy: bool  # Keeper's Mercy: slower boats, wider beam, softer crashes
 var day: int
 var hull: int
 var max_hull: int
@@ -101,8 +102,9 @@ var run_perfects: int
 func _ready() -> void:
 	reset_campaign()
 
-func reset_campaign(seed_value: int = -1) -> void:
+func reset_campaign(seed_value: int = -1, mercy_enabled: bool = false) -> void:
 	run_seed = seed_value if seed_value >= 0 else randi() % 1000000
+	mercy = mercy_enabled
 	day = 1
 	hull = 85
 	max_hull = 100
@@ -440,12 +442,14 @@ func record_death() -> Dictionary:
 	var nights_held := day - 1
 	var cfg := ConfigFile.new()
 	cfg.load(RECORDS_PATH)  # missing file on first run is fine
-	var best: int = cfg.get_value("records", "best_nights", 0)
+	# Mercy runs keep their own ladder so full-difficulty records stay honest.
+	var best_key := "best_nights_mercy" if mercy else "best_nights"
+	var best: int = cfg.get_value("records", best_key, 0)
 	var total_runs: int = cfg.get_value("records", "total_runs", 0) + 1
 	var new_record := nights_held > best
 	if new_record:
 		best = nights_held
-	cfg.set_value("records", "best_nights", best)
+	cfg.set_value("records", best_key, best)
 	cfg.set_value("records", "total_runs", total_runs)
 	cfg.save(RECORDS_PATH)
 	_log_telemetry("death")

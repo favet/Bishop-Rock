@@ -55,6 +55,8 @@ func _process(delta: float) -> void:
 			nights_held, CampaignState.run_kills, CampaignState.run_perfects,
 			CampaignState.run_gold_earned, CampaignState.run_seed,
 			int(record["best_nights"]), int(record["total_runs"])]
+		if CampaignState.mercy:
+			lines += "\n(Keeper's Mercy)"
 		if record["new_record"]:
 			lines += "\nNEW RECORD"
 		lines += "\n\nPress R for a new campaign"

@@ -119,13 +119,15 @@ func _apply_campaign_profile() -> void:
 	spawner.fast_boat_weight = float(profile["fast_weight"])
 	spawner.heavy_boat_weight = float(profile["heavy_weight"])
 	spawner.max_simultaneous = int(profile["max_simultaneous"])
-	spawner.speed_scale = float(profile["speed_scale"])
+	spawner.speed_scale = float(profile["speed_scale"]) * (0.8 if CampaignState.mercy else 1.0)
 	spawner.start_interval = float(profile["start_interval"])
 	spawner.min_interval = float(profile["min_interval"])
 	spawner.first_spawn_delay = float(profile["first_spawn_delay"])
 	lighthouse.max_health = CampaignState.max_hull
 	lighthouse.health = CampaignState.hull
 	_beam.turn_speed_multiplier = CampaignState.beam_turn_multiplier()
+	if CampaignState.mercy:
+		_beam.cone_half_angle_deg *= 1.25
 	_gun.reload_time *= CampaignState.reload_multiplier()
 	var perfect_bonus := CampaignState.perfect_zone_bonus()
 	if perfect_bonus > 0.0:
@@ -185,11 +187,12 @@ func _perfect_kill_bonus(boat: Boat) -> int:
 func _crash_damage(boat: Boat) -> int:
 	if not campaign_mode:
 		return int(boat.ram_damage)
+	var damage := 6
 	if boat.max_health >= 8.0:
-		return 13
-	if boat.max_health <= 2.0:
-		return 4
-	return 6
+		damage = 13
+	elif boat.max_health <= 2.0:
+		damage = 4
+	return ceili(damage * 0.7) if CampaignState.mercy else damage
 
 func _float_text(pos: Vector2, text: String, color: Color, size: int = 16) -> void:
 	_floating_texts.append({position = pos, text = text, color = color, age = 0.0, size = size})
