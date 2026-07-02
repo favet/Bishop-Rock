@@ -29,23 +29,55 @@ Design docs live in [Docs/](Docs/) — start with [Docs/PRODUCT_BRIEF.md](Docs/P
 | `tests/` | Reserved for a future Godot test addon (GUT or gdUnit4) |
 | `Docs/` | Design docs and preproduction handoff |
 
-## Current State
+## Current State — Night Board v0
 
-This is scaffolding only. Placeholder scenes exist for the lighthouse, a boat, and the four MVP hazards (rock, mine, chain/net, buoy), but none of them have behavior yet, and none are instanced into the main scene. The input map (Q/E beam rotation, fire, cycle target, pause/slow, number-key modes) is wired in Project Settings but not bound to any logic.
+The first playable vertical slice: a single schematic night defense. Boats — basic, fast/weak, and slow/tough variants — spawn from any direction (a finite wave of 24) and steer toward the lighthouse around rocks; nets slow them, mines blow them up, buoys reveal them, and any hit visibly slows them down for a moment. The beam auto-sweeps by default (arrow keys to override); the main gun's hold-to-charge shot is the main killer, rendered as a ring around the lighthouse itself (not a HUD corner) that also drags the whole world into slow motion as it fills — overshoot it and the gun misfires, hurting the lighthouse. One shore turret chips away as a weak last-line defense. Boats show HP pips above their hull; the HUD shows enemy counts and unmistakable feedback (screen shake, flash, "LIGHTHOUSE HIT") whenever the lighthouse takes a hit. Lighthouse hull at 0 ends the run — press R to restart.
 
-See [Docs/BACKLOG.md](Docs/BACKLOG.md) for what's next, and [Docs/FABLE_HANDOFF.md](Docs/FABLE_HANDOFF.md) for which systems are reserved for a dedicated architecture pass rather than routine work.
+Architecture notes for extending it: [Docs/NIGHT_BOARD_V0.md](Docs/NIGHT_BOARD_V0.md). Task list: [Docs/BACKLOG.md](Docs/BACKLOG.md).
 
-## Input Map
+Not in yet: day loop/economy, tide, ammo types, radar inset, night repair, a real win/dawn screen (the wave just stops spawning once cleared).
 
-| Action | Key |
+## Controls
+
+| Key | Action |
 |---|---|
-| `beam_rotate_ccw` | Q |
-| `beam_rotate_cw` | E |
-| `fire` | Space |
-| `cycle_target` | Tab |
-| `pause_slow` | P |
-| `mode_1` | 1 |
-| `mode_2` | 2 |
-| `mode_3` | 3 |
+| ← / → | Rotate beam counterclockwise/clockwise (primary) |
+| Hold ↓ + ← / → | Rotate beam at slower, precise speed |
+| Q | Toggle beam mode: AUTO_SWEEP ↔ MANUAL_HOLD |
+| E | Rotate beam clockwise (secondary binding, same as →) |
+| Hold Space, release | Charge and fire the main gun (see Charge Shot below) |
+| Tab | Cycle target among illuminated boats |
+| 1 / 2 / 3 | Select gun mode (placeholder — no gameplay effect yet) |
+| P | Toggle slow motion |
+| F3 | Toggle debug overlay (rings, sectors, steering, hazard radii) |
+| R | Restart the night |
 
-Verify these under **Project > Project Settings > Input Map** after opening in the editor.
+### Beam Modes
+
+- **AUTO_SWEEP** (default): the beam rotates on its own. Holding ←/→ temporarily overrides it; releasing resumes the sweep from wherever the beam ended up.
+- **MANUAL_HOLD**: the beam only moves when you rotate it with ←/→, and stays exactly where you leave it otherwise.
+- Q toggles between the two modes at any time. Manual rotation with ←/→ works in both modes.
+
+### Charge Shot & Focus Ring
+
+Space is hold-to-charge, not tap-to-fire. You can only start charging when the gun is off cooldown — this is a fragile, overloaded weapon, not a turret you can lean on.
+
+- Holding Space fills a **ring around the lighthouse itself**, clockwise from the top, over ~0.7s. **75–95%** is the CHARGED zone (2x damage, gold band); **88–94%** (nested inside it) is the PERFECT zone (4x damage, red band) — both banded near the end of the ring, so you can see the target coming.
+- **There is no safe overshoot.** If the ring fills all the way while you're still holding, the gun **misfires** — no damage, a punishing reload, the ring resets, and the lighthouse itself takes a jolt of backlash damage (same screen-shake/flash/"LIGHTHOUSE HIT" feedback as a ram). Release *before* it fills, every time.
+- **The world slows down as you charge.** Boats, the shore turret, and incoming spawns all gradually grind toward a near-stop as the ring approaches full — and snap back to normal speed the instant you release or misfire. Your own beam control and the charge timer itself stay on real time, so the tension is real: everything else seems to freeze while your hand is still on the clock.
+- A reload ring sits just inside the charge ring, filling clockwise with a "READY"/"RELOADING NN%" label, flashing white the instant it completes — also drawn at the lighthouse, not the corner.
+- Targeting is unchanged: a released (non-misfired) shot resolves against the selected/nearest illuminated boat, or a wasted blind shot if nothing is illuminated. A hit also visibly slows the boat down for a moment, proportional to how hard it was hit.
+
+## Dev Harness
+
+`tests/ScreenshotRunner.tscn` boots the game, drives two charge/release sequences (one PERFECT, one deliberate misfire), and saves a spread of screenshots to `user://` (`%APPDATA%/Godot/app_userdata/Bishop Rock/`) before quitting:
+
+```
+godot --path . res://tests/ScreenshotRunner.tscn
+```
+
+Headless smoke test (no window, catches script errors):
+
+```
+godot --headless --path . --quit-after 600
+```

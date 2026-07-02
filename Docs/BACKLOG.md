@@ -19,29 +19,36 @@ Safe for routine agent work — scaffolding, docs, repo hygiene, no architecture
 - [ ] Set up a lightweight test/run harness (e.g., GUT or gdUnit4 addon) — `tests/` exists with a note only; no addon installed yet.
 - [ ] Add a basic day/night phase state machine skeleton (empty transitions: morning → day → dusk → night → dawn) with no gameplay inside each phase — explicitly deferred, not done in this scaffolding pass.
 
-### Immediate Next Tasks (post-scaffold)
+### Immediate Next Tasks (post-Night-Board-v0, Codex-safe)
 
-- [ ] Open the project in the actual Godot 4 editor once and confirm it imports/runs cleanly; let the editor rewrite `config/features` to match the installed version.
-- [ ] Decide whether to `git init` now and commit the scaffold as a baseline.
-- [ ] Wire `ui/HUD.tscn` and `debug/DebugOverlay.tscn` as child `CanvasLayer`s of `Main.tscn` (still no drawing/widget logic — just instancing).
-- [ ] Decide on a placeholder art style/palette (the ColorRect primitives are intentionally ugly stand-ins).
-- [ ] Pick and install a Godot test addon before any simulation logic lands, so tests exist from day one of that work.
+- [ ] Tuning pass: expose a difficulty knob (spawn ramp, boat hp/damage) and make an unattended lighthouse survive ~2 minutes. Now more urgent — hit-slowdown, focus-slowdown, and three boat variants interact in ways only a playtest will surface (see [NIGHT_BOARD_V0.md](./NIGHT_BOARD_V0.md#known-issues--deliberate-gaps)).
+- [x] Boat variants: FastBoat (quick/weak) and HeavyBoat (slow/strong) as export presets of `boat.gd` with `hull_tint`/`hull_scale`. See [NIGHT_BOARD_V0.md](./NIGHT_BOARD_V0.md#enemy-variants-v03).
+- [ ] Radar/sonar inset: corner display reading `VisibilitySystem` data (ghosts, states, beam angle).
+- [ ] Win condition: now that `BoatSpawner.wave_size` is finite and HUD announces "All remaining ships are on the sea.", add an actual dawn/win screen once `at_sea == 0 and wave_complete()`.
+- [ ] Pause vs slow: current P is slow-mo only; consider a true pause.
+- [ ] Make the HUD hint bar and "LIGHTHOUSE HIT" label resolution-independent (anchors instead of fixed positions).
+- [ ] Pick and install a Godot test addon (GUT/gdUnit4) and port the `tests/screenshot_runner.gd` smoke flow into it.
+- [ ] Screenshot harness: promote to a proper CLI flag (custom output path) if used in CI.
 
 ## 2. Fable-Worthy Architecture / Simulation Tasks
 
-Do not start these until explicitly requested. Logic-dense, cross-cutting, or hard to unwind if built wrong.
+Night Board v0 (2026-07-01) implemented the first slice of these — see [NIGHT_BOARD_V0.md](./NIGHT_BOARD_V0.md) for the architecture that now exists.
 
-- [ ] Ocean coordinate/navigation architecture (ring/sector abstraction vs. continuous boat movement — see [OCEAN_MODEL_SPEC.md](./OCEAN_MODEL_SPEC.md)).
-- [ ] Boat steering/pathfinding around rocks and hazards, including hard-blocked behavior (attack the blocker).
-- [ ] Beam cone / visibility / last-known-state implementation (contact → visible → illuminated → marked, with fade timers).
-- [ ] Main gun targeting tied to beam direction/illuminated sector.
-- [ ] Shore turret auto-fire logic and range/accuracy scaling against illuminated targets.
-- [ ] Hazard architecture: rocks (blocker + rule validation for "always leave a channel"), mines (trigger + explosion), chains/nets (slow/snare), buoys (reveal/mark).
-- [ ] Rock placement validation (navigable-approach check, seabed/depth validity).
-- [ ] Tide/depth/rock interaction rules (deferred until after baseline combat per [MVP_SPEC.md](./MVP_SPEC.md)).
+- [x] Ocean coordinate/navigation architecture v0 — `OceanGrid` polar rings/sectors + continuous boat movement, no physics engine.
+- [x] Boat steering around rocks (seek + radial repulsion + hard separation). **Remaining:** real pathfinding for dense rock mazes; hard-blocked boats attacking blockers.
+- [x] Beam cone / visibility / last-known-state — contact/spotted/illuminated on boats, fading ghosts + sector ticks in `VisibilitySystem`.
+- [x] Main gun targeting tied to beam (beam-as-reticle, illuminated-only, Tab cycling).
+- [x] Shore turret auto-fire with illuminated-damage bonus. **Rebalanced twice:** v0.2 dropped 6/9 dmg to 1/1.5 dmg so it can never one-shot alone; v0.3 further cut fire rate (0.6s→0.85s) and range (115→100) to offset hit-based slowdown making follow-up hits easier.
+- [x] Hazard v0 behaviors: rocks block, mines explode, nets slow, buoys reveal. **Remaining:** modular hazard architecture review once hazard count grows; net durability; mine damage still needs retuning (see below).
+- [x] Debug overlays (rings, sectors, beam edges, steering vectors, hazard radii, vis states — F3).
+- [x] First playable vertical slice (night defense only).
+- [x] Readability pass (v0.2): boat HP pips, lighthouse-hit feedback (flash/shake/pulse/text/health-lag), finite wave with enemy-status HUD line.
+- [x] Focus-ring/misfire/world-slowdown pass (v0.3): charge and reload meters moved from the HUD corner to world-space rings around the lighthouse; overshooting the charge ring now forces a misfire (punishing reload + lighthouse backlash damage) instead of gracefully falling back; charging linearly slows boats/turret/spawner toward a stop; hit boats now slow down proportional to damage taken. See [NIGHT_BOARD_V0.md](./NIGHT_BOARD_V0.md#charge-shot--focus-ring-v03).
+- [ ] Rock placement validation (navigable-approach check, seabed/depth validity) — needs the day phase.
+- [ ] Tide/depth/rock interaction rules (hooks noted in `ocean_grid.gd`/`rock.gd`; still post-baseline).
 - [ ] Day/night simulation state machine (real transitions, daylight pip economy wired to actions).
-- [ ] Debug overlays for rings, sectors, beam cone, boat steering, visibility, and hazard areas.
-- [ ] First hard playable vertical slice combining the above.
+- [ ] Balance/tuning pass on night combat — now higher priority given how many systems interact (focus slowdown, hit slowdown, 3 boat variants, misfire risk).
+- [ ] **Retune mine damage against the 4-hp basic boat** (60 dmg is still overkill). Turret has been rebalanced twice now; mines were out of scope both passes. See [NIGHT_BOARD_V0.md](./NIGHT_BOARD_V0.md#known-issues--deliberate-gaps).
 
 ## 3. Later Content / Polish Tasks
 

@@ -1,13 +1,19 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/lighthouse/lighthouse.gd" id="1_lighthouse"]
+[ext_resource type="Script" path="res://scripts/lighthouse/beam.gd" id="2_beam"]
+[ext_resource type="Script" path="res://scripts/lighthouse/main_gun.gd" id="3_main_gun"]
+[ext_resource type="Script" path="res://scripts/lighthouse/turret.gd" id="4_turret"]
 
 [node name="Lighthouse" type="Node2D"]
 script = ExtResource("1_lighthouse")
 
-[node name="Body" type="ColorRect" parent="."]
-offset_left = -8.0
-offset_top = -40.0
-offset_right = 8.0
-offset_bottom = 0.0
-color = Color(0.9, 0.85, 0.75, 1)
+[node name="Beam" type="Node2D" parent="."]
+script = ExtResource("2_beam")
+
+[node name="MainGun" type="Node2D" parent="."]
+script = ExtResource("3_main_gun")
+
+[node name="Turret" type="Node2D" parent="."]
+position = Vector2(34, 22)
+script = ExtResource("4_turret")

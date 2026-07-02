@@ -1,0 +1,73 @@
+[gd_scene load_steps=13 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/night_board.gd" id="1_night_board"]
+[ext_resource type="PackedScene" path="res://scenes/lighthouse/Lighthouse.tscn" id="2_lighthouse"]
+[ext_resource type="Script" path="res://scripts/core/visibility_system.gd" id="3_visibility"]
+[ext_resource type="Script" path="res://scripts/core/boat_spawner.gd" id="4_spawner"]
+[ext_resource type="PackedScene" path="res://scenes/boats/Boat.tscn" id="5_boat"]
+[ext_resource type="PackedScene" path="res://scenes/hazards/Rock.tscn" id="6_rock"]
+[ext_resource type="PackedScene" path="res://scenes/hazards/Mine.tscn" id="7_mine"]
+[ext_resource type="PackedScene" path="res://scenes/hazards/NetChain.tscn" id="8_net"]
+[ext_resource type="PackedScene" path="res://scenes/hazards/Buoy.tscn" id="9_buoy"]
+[ext_resource type="PackedScene" path="res://debug/DebugOverlay.tscn" id="10_debug"]
+[ext_resource type="PackedScene" path="res://scenes/boats/FastBoat.tscn" id="11_fast_boat"]
+[ext_resource type="PackedScene" path="res://scenes/boats/HeavyBoat.tscn" id="12_heavy_boat"]
+
+[node name="NightBoard" type="Node2D"]
+script = ExtResource("1_night_board")
+
+[node name="Lighthouse" parent="." instance=ExtResource("2_lighthouse")]
+
+[node name="Hazards" type="Node2D" parent="."]
+
+[node name="Rock1" parent="Hazards" instance=ExtResource("6_rock")]
+position = Vector2(150, -90)
+radius = 20.0
+
+[node name="Rock2" parent="Hazards" instance=ExtResource("6_rock")]
+position = Vector2(185, -58)
+radius = 16.0
+
+[node name="Rock3" parent="Hazards" instance=ExtResource("6_rock")]
+position = Vector2(138, -42)
+radius = 14.0
+
+[node name="Rock4" parent="Hazards" instance=ExtResource("6_rock")]
+position = Vector2(-170, 25)
+radius = 22.0
+
+[node name="Mine1" parent="Hazards" instance=ExtResource("7_mine")]
+position = Vector2(30, 170)
+
+[node name="Mine2" parent="Hazards" instance=ExtResource("7_mine")]
+position = Vector2(-60, 150)
+
+[node name="Mine3" parent="Hazards" instance=ExtResource("7_mine")]
+position = Vector2(150, 120)
+
+[node name="Net1" parent="Hazards" instance=ExtResource("8_net")]
+position = Vector2(-120, -12)
+slow_radius = 40.0
+
+[node name="Net2" parent="Hazards" instance=ExtResource("8_net")]
+position = Vector2(12, -150)
+
+[node name="Buoy1" parent="Hazards" instance=ExtResource("9_buoy")]
+position = Vector2(200, -160)
+
+[node name="Buoy2" parent="Hazards" instance=ExtResource("9_buoy")]
+position = Vector2(-180, 170)
+
+[node name="Boats" type="Node2D" parent="."]
+
+[node name="VisibilitySystem" type="Node2D" parent="."]
+script = ExtResource("3_visibility")
+
+[node name="BoatSpawner" type="Node" parent="."]
+script = ExtResource("4_spawner")
+boat_scene = ExtResource("5_boat")
+fast_boat_scene = ExtResource("11_fast_boat")
+heavy_boat_scene = ExtResource("12_heavy_boat")
+boats_container = NodePath("../Boats")
+
+[node name="DebugOverlay" parent="." instance=ExtResource("10_debug")]

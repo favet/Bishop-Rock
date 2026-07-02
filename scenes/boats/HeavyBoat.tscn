@@ -1,0 +1,13 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/boats/boat.gd" id="1_boat"]
+
+[node name="HeavyBoat" type="Node2D"]
+script = ExtResource("1_boat")
+max_health = 8.0
+speed = 24.0
+turn_rate = 1.6
+ram_damage = 26.0
+hull_radius = 12.0
+hull_tint = Color(1, 0.55, 0.45, 1)
+hull_scale = 1.3
