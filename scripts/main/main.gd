@@ -32,6 +32,7 @@ var _hull_label: Label
 var _daylight_tokens: Array[Control] = []
 var _daylight_preview_spend: int = 0
 var _zone_title: Label
+var _zone_buttons: Dictionary = {}
 var _action_list: VBoxContainer
 var _log_label: Label
 var _start_night_label: Label
@@ -87,7 +88,7 @@ func _show_start_screen() -> void:
 	var list := VBoxContainer.new()
 	list.add_theme_constant_override("separation", 12)
 	box.add_child(list)
-	_card_title(list, "Bishop Rock", "Hold the light for fifty days. Raids, repairs, food, and hard choices.")
+	_card_title(list, "Bishop Rock", "The sea never relents. Hold the light, night after night.")
 	var start := Button.new()
 	start.text = "Start New Campaign"
 	start.custom_minimum_size = Vector2(0, 44)
@@ -114,8 +115,8 @@ func _show_dawn(stats: Dictionary) -> void:
 	for line in [
 		"Boats sunk: %d" % int(stats["kills"]),
 		"Boats crashed: %d" % int(stats["crashed"]),
-		"Gold earned: %dg" % int(stats["gold_earned"]),
-		"Perfect bonuses: %dg" % int(stats["perfect_bonus_earned"]),
+		"Shillings earned: %d" % int(stats["gold_earned"]),
+		"Perfect bonuses: %d" % int(stats["perfect_bonus_earned"]),
 		"Hull damage taken: %d" % int(stats["hull_damage_taken"]),
 		"Hull: %d/%d" % [int(stats["hull"]), int(stats["max_hull"])],
 		"Defenses consumed: %d mines, %d barricades" % [int(consumed.get("mines", 0)), int(consumed.get("barricades", 0))],
@@ -133,6 +134,7 @@ func _show_dawn(stats: Dictionary) -> void:
 	list.add_child(button)
 
 func _show_day_hub() -> void:
+	_zone_buttons.clear()
 	_day_root = Control.new()
 	_day_root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_campaign_layer.add_child(_day_root)
@@ -232,6 +234,10 @@ func _show_day_hub() -> void:
 func _select_zone(zone: String) -> void:
 	_selected_zone = zone
 	_zone_title.text = zone
+	for z in _zone_buttons:
+		var selected: bool = z == zone
+		_zone_buttons[z].add_theme_stylebox_override("normal",
+			_panel_style(PANEL_HOVER if selected else PANEL, BRASS if selected else BRASS_DARK, 3 if selected else 2))
 	for child in _action_list.get_children():
 		child.queue_free()
 	for action in _actions_for_zone(zone):
@@ -249,6 +255,7 @@ func _zone_card(zone: String) -> Button:
 	card.add_theme_stylebox_override("normal", _panel_style(PANEL, BRASS_DARK, 2))
 	card.add_theme_stylebox_override("hover", _panel_style(PANEL_HOVER, BRASS, 2))
 	card.pressed.connect(_select_zone.bind(zone))
+	_zone_buttons[zone] = card
 	return card
 
 func _action_card(action: Dictionary) -> Button:
@@ -263,8 +270,13 @@ func _action_card(action: Dictionary) -> Button:
 	rows.position = Vector2(12, 8)
 	button.add_child(rows)
 	_card_title(rows, action["name"], action["effect"], false)
-	_trade_rows(rows, action.get("cost", {}), RED, "-")
-	_trade_rows(rows, action.get("gain", {}), GREEN, "+")
+	var cost: Dictionary = action.get("cost", {})
+	for key in cost.keys():
+		_have_need_row(rows, key, int(CampaignState.get(key)), int(cost[key]))
+	var gain: Dictionary = action.get("gain", {})
+	if not gain.is_empty():
+		_small_label(rows, "REWARD", BRASS, false)
+		_trade_rows(rows, gain, GREEN, "+")
 	if action.has("note"):
 		_small_label(rows, action["note"], MUTED, false)
 	# A Button doesn't grow to fit manual children — size it to the content
@@ -338,15 +350,15 @@ func _actions_for_zone(zone: String) -> Array[Dictionary]:
 			]
 		"Crafting":
 			return [
-				{"id": "sort_scrap", "name": "Sort Scrap", "effect": "Recover usable metal", "cost": {"energy_today": 1}, "gain": {"scrap": 2}},
-				{"id": "make_tool", "name": "Make Tool", "effect": "Forge one upgrade tool", "cost": {"energy_today": 1, "scrap": 5}, "gain": {"tools": 1}, "note": "Used for Lens Crank I, Rifle Breech I,\nand Rusty Autoturret."},
+				{"id": "sort_scrap", "name": "Sort Salvage", "effect": "Recover usable iron", "cost": {"energy_today": 1}, "gain": {"scrap": 2}},
+				{"id": "make_tool", "name": "Machine a Part", "effect": "Fabricate one precision part", "cost": {"energy_today": 1, "scrap": 5}, "gain": {"tools": 1}, "note": "Needed for Lens Crank I, Rifle Breech I,\nand Rusty Autoturret."},
 				{"id": "craft_mines", "name": "Craft Mines", "effect": "Prepare automatic night mines", "cost": {"energy_today": 1, "gold": 4, "scrap": 3}, "gain": {"mines": 2}},
 				{"id": "build_barricade", "name": "Build Barricade", "effect": "Reduce next crash damage", "cost": {"energy_today": 1, "wood": 4}, "gain": {"barricades": 1}},
 			]
 		"Supplies":
 			return [
-				{"id": "gather_driftwood", "name": "Gather Driftwood", "effect": "Comb the shore for lumber", "cost": {"energy_today": 1}, "gain": {"wood": 4}},
-				{"id": "fish", "name": "Fish", "effect": "Food with a little market value", "cost": {"energy_today": 1}, "gain": {"food": 2, "gold": 2}},
+				{"id": "gather_driftwood", "name": "Gather Driftwood", "effect": "Comb the shore for timber", "cost": {"energy_today": 1}, "gain": {"wood": 4}},
+				{"id": "fish", "name": "Fish", "effect": "Rations and a few shillings", "cost": {"energy_today": 1}, "gain": {"food": 2, "gold": 2}},
 				{"id": "dive_wreckage", "name": "Dive Wreckage", "effect": "Salvage below the dock", "cost": {"energy_today": 2}, "gain": {"wood": 2, "scrap": 3}, "note": "Once per day."},
 				{"id": "plant_potatoes", "name": "Plant Potatoes", "effect": "Matures after 3 days", "cost": {"energy_today": 1, "food": 1}, "gain": {"crop": 1}},
 				{"id": "harvest_potatoes", "name": "Harvest Potatoes", "effect": "Free harvest from mature plots", "cost": {}, "gain": {"food": 5 + (1 if CampaignState.completed_projects.has("garden_bed_prep") else 0)}},
@@ -383,9 +395,9 @@ func _zone_label(zone: String) -> String:
 		"Repairs":
 			return "REPAIRS\nHull, lens, lighthouse work"
 		"Crafting":
-			return "CRAFTING\nScrap, tools, mines, defenses"
+			return "CRAFTING\nIron, parts, mines, defenses"
 		"Supplies":
-			return "SUPPLIES\nWood, food, salvage, crops"
+			return "SUPPLIES\nTimber, rations, salvage, crops"
 		"Rest":
 			return "REST\nMeals, daylight, scouting"
 	return zone
@@ -397,7 +409,7 @@ func _hull_resource() -> PanelContainer:
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_theme_constant_override("separation", 6)
 	wrap.add_child(box)
-	box.add_child(ResourceIcon.new("hull", 26))
+	box.add_child(ResourceIcon.new("hull", 34))
 	var rows := VBoxContainer.new()
 	box.add_child(rows)
 	_hull_label = Label.new()
@@ -430,7 +442,7 @@ func _daylight_resource() -> PanelContainer:
 	tokens.add_theme_constant_override("separation", 4)
 	rows.add_child(tokens)
 	for i in maxi(CampaignState.energy_max, CampaignState.energy_today):
-		var token := ResourceIcon.new("daylight", 20)
+		var token := ResourceIcon.new("daylight", 26)
 		token.name = "DaylightToken%d" % i
 		tokens.add_child(token)
 		_daylight_tokens.append(token)
@@ -443,7 +455,7 @@ func _resource_badge(key: String, value: String) -> PanelContainer:
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_theme_constant_override("separation", 6)
 	wrap.add_child(box)
-	box.add_child(ResourceIcon.new(ResourceIcon.kind_for(key), 26))
+	box.add_child(ResourceIcon.new(ResourceIcon.kind_for(key), 34))
 	var label := Label.new()
 	label.text = value
 	label.add_theme_font_size_override("font_size", 18)
@@ -505,19 +517,25 @@ func _resource_row(parent: VBoxContainer, prefix: String, key: String, amount: i
 	row.add_child(sign)
 	var kind := ResourceIcon.kind_for(key)
 	if not kind.is_empty():
-		row.add_child(ResourceIcon.new(kind, 20))
+		row.add_child(ResourceIcon.new(kind, 24))
 	var label := Label.new()
 	label.text = "%s %d" % [_display_resource_name(key), amount]
 	label.add_theme_color_override("font_color", color)
 	row.add_child(label)
 
+## "X/N Material" — green once you meet the need, red while short.
 func _have_need_row(parent: VBoxContainer, key: String, have: int, need: int) -> void:
 	var color := GREEN if have >= need else RED
 	var row := HBoxContainer.new()
 	row.tooltip_text = _gain_hint(key)
+	row.add_theme_constant_override("separation", 6)
 	parent.add_child(row)
+	var kind := ResourceIcon.kind_for(key)
+	if not kind.is_empty():
+		row.add_child(ResourceIcon.new(kind, 24))
 	var label := Label.new()
-	label.text = "%s %d / %d" % [_display_resource_name(key), have, need]
+	label.text = "%d/%d %s" % [have, need, _display_resource_name(key)]
+	label.add_theme_font_size_override("font_size", 15)
 	label.add_theme_color_override("font_color", color)
 	row.add_child(label)
 
@@ -556,9 +574,9 @@ func _defense_strip() -> PanelContainer:
 	row.add_theme_constant_override("separation", 12)
 	wrap.add_child(row)
 	_small_label(row, "TONIGHT'S DEFENSES", BRASS, false)
-	row.add_child(ResourceIcon.new("mines", 20))
+	row.add_child(ResourceIcon.new("mines", 26))
 	_small_label(row, "Mines %d" % CampaignState.mines, TEXT, false)
-	row.add_child(ResourceIcon.new("barricades", 20))
+	row.add_child(ResourceIcon.new("barricades", 26))
 	_small_label(row, "Barricades %d" % CampaignState.barricades, TEXT, false)
 	if not CampaignState.scouted_profile.is_empty():
 		_small_label(row, "Scout: %s" % CampaignState.scouted_profile["profile_name"], MUTED, false)
@@ -576,15 +594,15 @@ func _project_tooltip(cost: Dictionary) -> String:
 func _gain_hint(key: String) -> String:
 	match key:
 		"gold":
-			return "Gain from sinking boats and Fishing."
+			return "Shillings. Gain from sinking boats and Fishing."
 		"wood":
-			return "Gain from Gather Driftwood or Dive Wreckage."
+			return "Timber. Gain from Gather Driftwood or Dive Wreckage."
 		"scrap":
-			return "Gain from Sort Scrap or Dive Wreckage."
+			return "Iron. Gain from Sort Salvage or Dive Wreckage."
 		"food":
-			return "Gain from Fishing and crops."
+			return "Rations. Gain from Fishing and crops."
 		"tools":
-			return "Make tools in Crafting. Used for Lens Crank I, Rifle Breech I, and Rusty Autoturret."
+			return "Machine parts in Crafting. Needed for Lens Crank I, Rifle Breech I, and Rusty Autoturret."
 		"energy_today", "daylight_work":
 			return "Daylight is your work time for the day."
 	return ""
@@ -596,31 +614,33 @@ func _resource_tooltip(key: String) -> String:
 		"energy_today":
 			return "Daylight\nYour work time for the day. Most actions spend Daylight. Rest or Cook can improve tomorrow."
 		"gold":
-			return "Gold\nUsed for repairs, projects, crafting, and supplies. Earned by sinking boats and fishing."
+			return "Shillings\nUsed for repairs, projects, crafting, and supplies. Earned by sinking boats and fishing."
 		"wood":
-			return "Wood\nUsed for repairs, barricades, farm work, and hull projects. Gain from Gather Driftwood or Dive Wreckage."
+			return "Timber\nUsed for repairs, barricades, farm work, and hull projects. Gain from Gather Driftwood or Dive Wreckage."
 		"scrap":
-			return "Scrap\nUsed for mines, tools, gun upgrades, and turret work. Gain from Sort Scrap or Dive Wreckage."
+			return "Iron\nUsed for mines, parts, gun upgrades, and turret work. Gain from Sort Salvage or Dive Wreckage."
 		"food":
-			return "Food\nUsed for meals and planting. Gain from Fishing and crops."
+			return "Rations\nUsed for meals and planting. Gain from Fishing and crops."
 		"day":
 			return "Day\nSurvive nights, spend daylight, and keep the lighthouse standing."
 	return ""
 
+## Player-facing material names. Internal keys stay gold/wood/scrap/food/
+## tools so save data and action definitions don't churn on a rename.
 func _display_resource_name(key: String) -> String:
 	match key:
 		"energy_today", "tomorrow_daylight", "daylight_work":
 			return "Daylight"
 		"gold":
-			return "Gold"
+			return "Shillings"
 		"wood":
-			return "Wood"
+			return "Timber"
 		"scrap":
-			return "Scrap"
+			return "Iron"
 		"food":
-			return "Food"
+			return "Rations"
 		"tools":
-			return "Tool"
+			return "Parts"
 		"mines":
 			return "Mine"
 		"barricades":

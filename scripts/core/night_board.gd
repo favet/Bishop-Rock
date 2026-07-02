@@ -77,12 +77,12 @@ func _on_boat_spawned(boat: Boat) -> void:
 func _on_boat_died(boat: Boat) -> void:
 	kills += 1
 	var reward := _base_reward(boat)
-	var label := "+%dg" % reward
+	var label := "+%ds" % reward
 	if boat.killed_by_perfect:
 		var bonus := _perfect_kill_bonus(boat)
 		reward += bonus
 		perfect_bonus_earned += bonus
-		label = "+%dg PERFECT" % reward
+		label = "+%ds PERFECT" % reward
 	gold_earned += reward
 	if campaign_mode:
 		CampaignState.gold += reward

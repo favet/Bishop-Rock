@@ -159,8 +159,19 @@ func missing_text(cost: Dictionary) -> String:
 	return ", ".join(missing)
 
 func _display_name(key: String) -> String:
-	if key == "energy_today":
-		return "Daylight"
+	match key:
+		"energy_today":
+			return "Daylight"
+		"gold":
+			return "Shillings"
+		"wood":
+			return "Timber"
+		"scrap":
+			return "Iron"
+		"food":
+			return "Rations"
+		"tools":
+			return "Parts"
 	return key.capitalize()
 
 func perform_action(action_id: String) -> String:
@@ -188,13 +199,13 @@ func perform_action(action_id: String) -> String:
 				return "Need 1 Daylight."
 			scrap += 2
 			changed.emit()
-			return "Sorted +2 scrap."
+			return "Salvaged +2 iron."
 		"make_tool":
 			if not spend({"energy_today": 1, "scrap": 5}):
 				return "Missing %s." % missing_text({"energy_today": 1, "scrap": 5})
 			tools += 1
 			changed.emit()
-			return "Made a tool."
+			return "Machined a part."
 		"craft_mines":
 			if not spend({"energy_today": 1, "gold": 4, "scrap": 3}):
 				return "Missing %s." % missing_text({"energy_today": 1, "gold": 4, "scrap": 3})
@@ -212,7 +223,7 @@ func perform_action(action_id: String) -> String:
 				return "Need 1 Daylight."
 			wood += 4
 			changed.emit()
-			return "Gathered +4 wood."
+			return "Gathered +4 timber."
 		"fish":
 			if not spend({"energy_today": 1}):
 				return "Need 1 Daylight."
@@ -229,7 +240,7 @@ func perform_action(action_id: String) -> String:
 			wood += 2
 			scrap += 3
 			changed.emit()
-			return "Recovered wood and scrap."
+			return "Recovered timber and iron."
 		"plant_potatoes":
 			if _open_farm_plots() <= 0:
 				return "No open farm plot."

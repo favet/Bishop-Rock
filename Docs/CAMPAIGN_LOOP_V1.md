@@ -1,10 +1,12 @@
 # Campaign Loop v1
 
-Campaign v1 wraps Night Board v0 with a long-haul survival loop (50-day target; raid pressure ramps by day and plateaus after day 15 pending later tuning):
+Campaign v1 wraps Night Board v0 with a perpetual survival loop — there is no final day; raid pressure ramps per day and currently plateaus after day 15 (endless scaling is a known gap):
 
 Night raid -> dawn summary -> visual day hub -> spend Daylight/resources -> next night.
 
 "Daylight" is the player-facing name for daily work energy (`energy_today` internally). The UI never says "energy."
+
+Materials are rebranded in the UI only — internal keys are unchanged: gold -> Shillings, wood -> Timber, scrap -> Iron, food -> Rations, tools -> Parts. Rename in `_display_resource_name` (main.gd) and `_display_name` (run_state.gd) if these change again.
 
 ## State
 
@@ -49,7 +51,8 @@ The day hub is a brass-on-iron card layout built in `scripts/main/main.gd`:
 
 Card conventions:
 
-- Actions show name, short effect, then red "-" rows for costs and green "+" rows for gains, each with a stamped resource badge. No prose like "Cost 3g 2 wood."
+- Actions show name, short effect, then one "X/N Material" row per cost (X = what you hold, N = what it needs; green when X >= N, red when short), then a REWARD section with green "+" rows. No prose like "Cost 3g 2 wood."
+- The selected zone card carries a bright brass border and lighter fill so you always know which zone is open.
 - Hovering an action that costs Daylight ghosts exactly that many tokens in the top-bar Daylight display (the "about to be spent" preview). Cards never print "Daylight after."
 - Projects show effect first, then have/need requirement rows (green when met, red when short), work progress, and — when unaffordable — an explicit red Missing list with gain hints. Unaffordable projects remain clickable and inspectable.
 - Tools are called out as inputs for Lens Crank I, Rifle Breech I, and Rusty Autoturret on the Make Tool card and in project tooltips.
