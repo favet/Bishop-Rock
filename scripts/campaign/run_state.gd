@@ -142,6 +142,7 @@ func start_day() -> void:
 	changed.emit()
 
 const TELEMETRY_PATH := "user://runs.csv"
+var telemetry_enabled: bool = true  # policy sims turn this off
 
 ## One CSV row per dawn and per death: resource snapshot + last night's
 ## result. After a handful of runs this answers "which action dominates"
@@ -149,6 +150,8 @@ const TELEMETRY_PATH := "user://runs.csv"
 ## ponytail: per-zone Daylight spend not tracked; add a per-action counter
 ## if resource deltas alone can't explain a dominant strategy.
 func _log_telemetry(event: String) -> void:
+	if not telemetry_enabled:
+		return
 	var file: FileAccess
 	if FileAccess.file_exists(TELEMETRY_PATH):
 		file = FileAccess.open(TELEMETRY_PATH, FileAccess.READ_WRITE)
