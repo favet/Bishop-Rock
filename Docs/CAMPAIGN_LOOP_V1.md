@@ -2,13 +2,15 @@
 
 Campaign v1 wraps Night Board v0 with a seven-day survival loop:
 
-Night raid -> dawn summary -> visual day hub -> spend energy/resources -> next night.
+Night raid -> dawn summary -> visual day hub -> spend Daylight/resources -> next night.
+
+"Daylight" is the player-facing name for daily work energy (`energy_today` internally). The UI never says "energy."
 
 ## State
 
-`CampaignState` is an autoload backed by `scripts/campaign/run_state.gd`. It tracks day, hull, energy, gold, wood, scrap, food, tools, mines, barricades, farm plots, crops, projects, completed upgrades, turret unlock state, clean-lens state, and the last night summary.
+`CampaignState` is an autoload backed by `scripts/campaign/run_state.gd`. It tracks day, hull, Daylight (energy), gold, wood, scrap, food, tools, mines, barricades, farm plots, crops, projects, completed upgrades, turret unlock state, clean-lens state, and the last night summary.
 
-Day 1 starts at 85/100 hull, 6 energy, 12 gold, 8 wood, 2 scrap, 3 food, 1 farm plot, and no turret.
+Day 1 starts at 85/100 hull, 6 Daylight, 12 gold, 8 wood, 2 scrap, 3 food, 1 farm plot, and no turret.
 
 ## Nights
 
@@ -38,18 +40,25 @@ When the wave is fully spawned and all boats are resolved, the dawn summary show
 
 ## Day Hub
 
-The day hub has four visual zones:
+The day hub is a brass-on-iron card layout built in `scripts/main/main.gd`:
 
-- Lighthouse: patch, full repair, clean lens, lighthouse projects.
-- Workshop: scrap, tools, mines, barricades, workshop projects.
-- Shore / Dock / Farm: wood, fish, wreckage, potatoes, farm projects.
-- Quarters: rest, cook, scout.
+- Top bar: only the core resources — Hull (bar + label, fill always relative to current `max_hull`), Daylight (one brass token per point; spent tokens go dark), Gold, Wood, Scrap, Food, and the Day number. Every entry has a hover tooltip stating what the resource is for and how to gain it. Tools, mines, and barricades are deliberately NOT here.
+- Left: four functional zone cards — Repairs (hull, lens, lighthouse work), Crafting (scrap, tools, mines, defenses), Supplies (wood, food, salvage, crops), Rest (meals, daylight, scouting).
+- Right: detail panel listing the selected zone's action and project cards plus a feedback log.
+- Bottom: "Tonight's Defenses" strip (mines, barricades, scout result) and a fixed, brass, always-in-the-same-place Start Night button showing the night number and raid forecast.
 
-Actions are compact buttons with a feedback log. Unaffordable projects remain clickable and show missing resources. Tools are called out as inputs for Lens Crank I, Rifle Breech I, and Rusty Autoturret.
+Card conventions:
+
+- Actions show name, short effect, then red "-" rows for costs and green "+" rows for gains, each with a stamped resource badge. No prose like "Cost 3g 2 wood."
+- Hovering an action that costs Daylight ghosts exactly that many tokens in the top-bar Daylight display (the "about to be spent" preview). Cards never print "Daylight after."
+- Projects show effect first, then have/need requirement rows (green when met, red when short), work progress, and — when unaffordable — an explicit red Missing list with gain hints. Unaffordable projects remain clickable and inspectable.
+- Tools are called out as inputs for Lens Crank I, Rifle Breech I, and Rusty Autoturret on the Make Tool card and in project tooltips.
+
+Debug: the F3 world overlay is off by default; the normal night HUD shows only hull, night number, contacts, and rifle readiness.
 
 ## Projects
 
-Projects pay a start cost, then consume energy over one or more days. Starter projects are reachable early: Greased Crank, Breech Cleaning Kit, Patch Frame, and Garden Bed Prep.
+Projects pay a start cost, then consume Daylight over one or more days. Starter projects are reachable early: Greased Crank, Breech Cleaning Kit, Patch Frame, and Garden Bed Prep.
 
 Applied effects:
 
@@ -63,3 +72,5 @@ Applied effects:
 ## Deferred
 
 No trader, sector placement UI, breakwaters, decoys, storms, ammo types, radar inset, advanced events, or art pass in this slice.
+
+UI art still deferred: resource badges are stamped two-letter brass chips and Daylight tokens are flat brass rectangles — cohesive placeholders, no emoji. Replace with drawn brass icons (sun/lens tokens, gauge-style hull) in a later art pass.
