@@ -31,6 +31,8 @@ enum VisState { CONTACT, SPOTTED, ILLUMINATED }
 var health: float
 var heading: float = 0.0
 var vis_state: VisState = VisState.CONTACT
+var perfect_reward_claimed: bool = false
+var killed_by_perfect: bool = false
 
 # Exposed for DebugOverlay steering vectors.
 var debug_desired := Vector2.ZERO
@@ -80,15 +82,17 @@ func _physics_process(delta: float) -> void:
 func _process(_delta: float) -> void:
 	queue_redraw()
 
-func take_damage(amount: float) -> void:
+func take_damage(amount: float, quality: int = -1) -> bool:
 	health -= amount
 	if health <= 0.0:
+		killed_by_perfect = quality == MainGun.ShotQuality.PERFECT
 		died.emit(self)
 		queue_free()
-		return
+		return true
 	var relative := clampf(amount / max_health, 0.0, 1.0)
 	var target := clampf(1.0 - relative * hit_slow_strength, hit_slow_floor, 1.0)
 	_hit_slow_factor = minf(_hit_slow_factor, target)
+	return false
 
 ## Radial repulsion from rocks within lookahead range.
 func _rock_avoidance() -> Vector2:

@@ -47,6 +47,8 @@ extends Node2D
 
 enum ShotQuality { NORMAL, CHARGED, PERFECT, MISFIRE }
 
+signal shot_hit(boat: Boat, quality: int, killed: bool)
+
 const QUALITY_LABELS: Array[String] = ["NORMAL", "CHARGED 2x", "PERFECT 4x", "MISFIRE"]
 const TRACER_TIME := 0.3
 const RESULT_FLASH_TIME := 0.9
@@ -258,7 +260,8 @@ func _resolve_shot(quality: ShotQuality) -> void:
 
 	if target != null:
 		_tracers.append({from = Vector2.ZERO, to = to_local(target.global_position), age = 0.0, hit = true, quality = quality})
-		target.take_damage(base_damage * multiplier_for(quality))
+		var killed := target.take_damage(base_damage * multiplier_for(quality), quality)
+		shot_hit.emit(target, quality, killed)
 	else:
 		# No illuminated target: still resolves as a wasted blind shot (see TODO above).
 		_tracers.append({from = Vector2.ZERO, to = Vector2.from_angle(_beam.beam_angle) * fire_range, age = 0.0, hit = false, quality = quality})

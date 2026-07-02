@@ -13,6 +13,7 @@ enum Mode { AUTO_SWEEP, MANUAL_HOLD }
 @export var manual_speed_deg: float = 100.0
 @export var precision_speed_deg: float = 30.0
 @export var auto_direction: float = 1.0  # 1 = clockwise on screen
+@export var turn_speed_multiplier: float = 1.0
 
 var beam_angle: float = -PI / 2.0  # start pointing up
 var mode: Mode = Mode.AUTO_SWEEP
@@ -29,9 +30,9 @@ func _process(delta: float) -> void:
 	is_overriding = not is_zero_approx(axis)
 	if is_overriding:
 		var speed := precision_speed_deg if Input.is_action_pressed("beam_precision") else manual_speed_deg
-		beam_angle += deg_to_rad(speed) * axis * delta
+		beam_angle += deg_to_rad(speed) * turn_speed_multiplier * axis * delta
 	elif mode == Mode.AUTO_SWEEP:
-		beam_angle += deg_to_rad(auto_speed_deg) * auto_direction * delta
+		beam_angle += deg_to_rad(auto_speed_deg) * turn_speed_multiplier * auto_direction * delta
 	# MANUAL_HOLD with no input held: beam stays exactly where it is.
 	beam_angle = wrapf(beam_angle, 0.0, TAU)
 	queue_redraw()

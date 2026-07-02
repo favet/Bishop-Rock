@@ -26,6 +26,8 @@ signal boat_spawned(boat: Boat)
 @export var ramp_duration: float = 120.0
 @export var first_spawn_delay: float = 1.5
 @export var wave_size: int = 24  ## total boats for the night; spawning stops once reached
+@export var max_simultaneous: int = 99
+@export var speed_scale: float = 1.0
 
 var active: bool = true
 var spawned_count: int = 0
@@ -39,6 +41,8 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	if not active or wave_complete():
+		return
+	if get_tree().get_nodes_in_group("boats").size() >= max_simultaneous:
 		return
 	if _gun == null:
 		_gun = get_tree().get_first_node_in_group("main_gun") as MainGun
@@ -73,7 +77,7 @@ func _spawn() -> void:
 	var angle := randf() * TAU
 	boat.position = OceanGrid.polar(angle, OceanGrid.ring_radius(OceanGrid.Ring.HORIZON))
 	# Slight speed variation so waves don't arrive as a single line.
-	boat.speed *= randf_range(0.85, 1.15)
+	boat.speed *= randf_range(0.85, 1.15) * speed_scale
 	get_node(boats_container).add_child(boat)
 	spawned_count += 1
 	boat_spawned.emit(boat)
