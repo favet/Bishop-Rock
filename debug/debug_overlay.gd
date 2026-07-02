@@ -1,10 +1,10 @@
 class_name DebugOverlay
 extends Node2D
 ## World-space debug drawing: ocean rings/sectors, beam cone edges, boat
-## steering vectors and states, and hazard radii. Toggle with F3. On by
-## default while the prototype is schematic-first.
+## steering vectors and states, and hazard radii. Toggle with F3. Off by
+## default so normal play stays clean.
 
-var enabled: bool = true
+var enabled: bool = false
 
 const RING_NAMES: Array[String] = ["shore", "shallows", "midwater", "deep", "horizon"]
 

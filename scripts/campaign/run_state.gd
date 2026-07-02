@@ -155,8 +155,13 @@ func missing_text(cost: Dictionary) -> String:
 		var need := int(cost[key])
 		var have := int(get(key))
 		if have < need:
-			missing.append("%s %d" % [key, need - have])
+			missing.append("%s %d" % [_display_name(key), need - have])
 	return ", ".join(missing)
+
+func _display_name(key: String) -> String:
+	if key == "energy_today":
+		return "Daylight"
+	return key.capitalize()
 
 func perform_action(action_id: String) -> String:
 	match action_id:
@@ -174,13 +179,13 @@ func perform_action(action_id: String) -> String:
 			return "Repairs completed."
 		"clean_lens":
 			if not spend({"energy_today": 1}):
-				return "Need 1 energy."
+				return "Need 1 Daylight."
 			clean_lens_active = true
 			changed.emit()
 			return "Lens cleaned for tonight."
 		"sort_scrap":
 			if not spend({"energy_today": 1}):
-				return "Need 1 energy."
+				return "Need 1 Daylight."
 			scrap += 2
 			changed.emit()
 			return "Sorted +2 scrap."
@@ -204,13 +209,13 @@ func perform_action(action_id: String) -> String:
 			return "Built a barricade."
 		"gather_driftwood":
 			if not spend({"energy_today": 1}):
-				return "Need 1 energy."
+				return "Need 1 Daylight."
 			wood += 4
 			changed.emit()
 			return "Gathered +4 wood."
 		"fish":
 			if not spend({"energy_today": 1}):
-				return "Need 1 energy."
+				return "Need 1 Daylight."
 			food += 2
 			gold += 2
 			changed.emit()
@@ -219,7 +224,7 @@ func perform_action(action_id: String) -> String:
 			if daily_caps.get("dive_wreckage", false):
 				return "Dive wreckage is done for today."
 			if not spend({"energy_today": 2}):
-				return "Need 2 energy."
+				return "Need 2 Daylight."
 			daily_caps["dive_wreckage"] = true
 			wood += 2
 			scrap += 3
@@ -266,7 +271,7 @@ func _add_tomorrow_energy(cap_id: String, amount: int, cost: Dictionary) -> Stri
 	daily_caps[cap_id] = true
 	tomorrow_energy_bonus = mini(tomorrow_energy_bonus + amount, 2)
 	changed.emit()
-	return "Tomorrow energy +%d." % amount
+	return "Tomorrow Daylight +%d." % amount
 
 func start_project(project_id: String) -> String:
 	if completed_projects.has(project_id):
@@ -287,7 +292,7 @@ func work_project(project_id: String) -> String:
 	if not active_projects.has(project_id):
 		return "Start this project first."
 	if not spend({"energy_today": 1}):
-		return "Need 1 energy."
+		return "Need 1 Daylight."
 	active_projects[project_id]["work_done"] = int(active_projects[project_id]["work_done"]) + 1
 	var project := project_def(project_id)
 	if int(active_projects[project_id]["work_done"]) >= int(project["work_required"]):
