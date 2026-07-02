@@ -183,10 +183,16 @@ func _show_day_hub() -> void:
 	_zone_title.add_theme_font_size_override("font_size", 24)
 	_zone_title.add_theme_color_override("font_color", BRASS)
 	panel.add_child(_zone_title)
+	# Scroll keeps tall zones (Crafting/Supplies project lists) from pushing
+	# the footer — Start Night must never move on zone switch.
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	panel.add_child(scroll)
 	_action_list = VBoxContainer.new()
-	_action_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_action_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_action_list.add_theme_constant_override("separation", 8)
-	panel.add_child(_action_list)
+	scroll.add_child(_action_list)
 	_log_label = Label.new()
 	_log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_log_label.custom_minimum_size = Vector2(0, 42)
