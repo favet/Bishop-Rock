@@ -98,3 +98,76 @@ Trader economy, storms as a system, morale/starvation, new boat classes,
 sector placement UI, breakwaters/decoys. Each is a good idea that costs a
 month and dilutes the loop before the loop is proven. The loop is proven
 when testers voluntarily start run #3.
+
+## Round 2 — further recommendations (actionable)
+
+### 7. Kill the duplicated cost tables (do this first, it's a live bug farm)
+Action costs are declared twice: once in `main.gd _actions_for_zone` (what
+the UI shows) and again in `run_state.gd perform_action` (what spend()
+charges). The moment one is tuned and the other isn't, the UI lies about
+prices — the exact class of bug this whole pass existed to kill.
+Action: move every action into one `const ACTIONS := {...}` table in
+run_state.gd (id, name, effect, cost, gain, zone, daily_cap). UI reads it;
+`perform_action` becomes one generic ~15-line function that spends cost and
+applies gain. Deletes ~100 lines of match arms; tuning becomes editing one
+table. Projects already work this way (`START_PROJECTS`) — mirror it.
+
+### 8. Audio: the game is currently silent — biggest feel-per-hour lever
+Zero AudioStream nodes in the repo. Even placeholder audio transforms
+perceived quality. Action, in one sitting:
+- Buses: Master -> Music, SFX, UI (AudioServer, godot-audio setup).
+- Eight sounds cover the whole game: wave loop (ambient), foghorn (night
+  start), rifle crack, charge hum (pitch rises with charge), PERFECT ding,
+  hull crunch, mine thump, brass click (UI press).
+- Source CC0 only: Kenney audio packs / freesound CC0 filter — matches the
+  no-license-risk rule already in this pass.
+- Duck Music -6 dB for 0.4 s on hull hit (one tween on bus volume).
+
+### 9. Make PERFECT feel perfect (numbers, not vibes)
+There's screen shake; the signature move deserves the full stack:
+- Hit-stop: `Engine.time_scale = 0.05` for 70 ms on perfect kill (timer must
+  be `ignore_time_scale`), then restore.
+- One-frame white flash on the boat sprite, 1.15x camera zoom pulse easing
+  back over 0.25 s.
+- Float text already exists — make PERFECT text 2x size, gold.
+Budget: ~30 lines in night_board / main_gun, no new systems.
+
+### 10. Persist a best-run record and show it at death
+"LIGHTHOUSE LOST ... Press R" wastes the most emotional moment. Action:
+- One ConfigFile at `user://records.cfg`: best_day, best_kills, total_runs.
+- Death screen: this run's line vs best line; stamp "NEW RECORD" when beaten.
+- ~25 lines in hud.gd game-over path. This is the cheapest possible version
+  of the score-screen retention loop from item 1.
+
+### 11. Run telemetry for tuning (data beats debate)
+Append one CSV row per day to `user://runs.csv`: run_id, day, hull at dawn,
+daylight spent per zone, shillings earned, boats crashed. ~20 lines in
+`start_day`/game-over. After ten playtests you'll *know* whether Fish
+dominates and which day kills people, instead of guessing. Balance items
+2, 3, and the raid curve all become chart-reading.
+
+### 12. First three dawns teach, one line each (no tutorial system)
+Contextual drip via the existing log label / dawn screen:
+- Dawn 1: "Patch the hull before nightfall — crashes hurt more than repairs cost."
+- Dawn 2: "Salvage and parts unlock the workshop projects."
+- Dawn 3: "Rest today improves tomorrow's Daylight."
+`if day <= 3` + three strings. Delete when real onboarding exists.
+
+### 13. Assist toggles broaden the audience for free
+One settings dict + three checkboxes on the start screen ("Keeper's Mercy"):
+boat speed -20%, beam cone +25%, crash damage -30%. Each toggle multiplies
+final score by 0.85 so records stay honest. Roguelites live and die on
+letting weaker players see day 10.
+
+### 14. Seed the run, show the seed
+Give each run a seed (`randi()` at campaign start, seed all raid/loot rolls
+from one `RandomNumberGenerator`). Show it on the death screen; accept a
+typed seed on the start screen. Costs ~15 lines now, enables shareable runs
+("try seed 4471") and a daily-challenge mode later. Retrofitting seeded RNG
+after more systems land is 10x the work.
+
+### 15. Make bought defenses visible doing their job at night
+A mine that fires while the player is aiming elsewhere is a purchase they
+never see pay off. Float "MINE -6" at the blast, brief flash on the
+barricade when it eats a crash. If a purchase never visibly works, players
+stop buying it. ~10 lines where those effects already resolve.
