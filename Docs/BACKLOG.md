@@ -54,6 +54,13 @@ Night Board v0 (2026-07-01) implemented the first slice of these — see [NIGHT_
 
 Not needed for MVP acceptance. Sequence after the vertical slice proves the core loop is fun.
 
+- [ ] Trader / visiting supply boat economy.
+- [ ] Sector-based mine and barricade placement UI.
+- [ ] Breakwaters and other shoreline construction.
+- [ ] Decoys and false-light defenses.
+- [ ] Storm events and storm damage.
+- [ ] Advanced day/night events.
+- [ ] Better art/icons for the campaign hub.
 - [ ] Additional enemy behaviors: raiders that land, ranged boats, fog-making boats, mine-sweeping boats.
 - [ ] Additional hazards: reefs, oil slicks, decoy lanterns, wrecks, currents, fog banks, explosive barrels, sandbars.
 - [ ] Later ammo types: chain shot, flare shot, explosive shot, salt/anti-ghost shot, harpoon shot.
