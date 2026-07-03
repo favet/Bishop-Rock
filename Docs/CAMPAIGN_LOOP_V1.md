@@ -82,8 +82,10 @@ Applied effects:
 - Keeper's Mercy assist toggle; perfect-kill juice (hit-stop, zoom pulse, 30px float text); lit boats show their bounty; telemetry CSV per dawn/death (`user://runs.csv`); first three dawns carry keeper's-note hints.
 - Balance guard: `tests/policy_sim_check.gd` asserts no single-action day policy keeps up with balanced play and that scaling ends every run.
 
+- Save/load: runs checkpoint to `user://save.cfg` at dawn, after night results, and on Start Night; the start screen offers Continue Campaign; death deletes the save. Versioned (`SAVE_VERSION`) for future migration.
+
 ## Deferred
 
-No trader, sector placement UI, breakwaters, decoys, ammo types, radar inset, advanced events, save/load (next priority), or art pass in this slice.
+No trader, sector placement UI, breakwaters, decoys, ammo types, radar inset, advanced events, or art pass in this slice.
 
 UI art: resources use `ui/resource_icon.gd`, a code-drawn brass icon set (coin, planks, riveted shard, fish, sun, lighthouse, hammer, naval mine, crossed planks, sunrise) sharing one plate/rim/palette treatment. Daylight tokens are the sun icon; ghost/spent states are modulate-based. Cohesive, no emoji, no external assets. A real texture/art pass can replace the class wholesale later.

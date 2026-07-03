@@ -8,9 +8,9 @@ how long you held and what you sank.
 2-of-3 project offering (deferred: playtest the current project list first),
 overcharge shot and mine ring placement (skipped: the existing
 NORMAL/CHARGED/PERFECT/misfire bands already carry the risk curve, and mine
-rings add a knob without tension), and save/load (next priority, not
-started). Balance numbers from the policy sim: all-fish dies night 11,
-balanced play holds ~26.
+rings add a knob without tension). Save/load is DONE (checkpoint saves,
+Continue button, delete on death). Balance numbers from the policy sim:
+all-fish dies night 11, balanced play holds ~26.
 
 ## What already works
 
