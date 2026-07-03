@@ -80,6 +80,20 @@ func _ready() -> void:
 				assert(not button.disabled, "unaffordable project must stay clickable")
 	assert(found_cannot_start, "expected an unaffordable project card")
 
+	# Save/load round-trip through the autoload (bare instances don't persist).
+	CampaignState.gold = 17
+	CampaignState.day = 4
+	CampaignState.active_crops.assign([{"crop": "potatoes", "days_left": 2}])
+	CampaignState.save_run()
+	CampaignState.gold = 1
+	CampaignState.day = 9
+	CampaignState.active_crops.clear()
+	assert(CampaignState.load_run(), "saved run must load")
+	assert(CampaignState.gold == 17 and CampaignState.day == 4, "load must restore fields")
+	assert(CampaignState.active_crops.size() == 1, "load must restore crops")
+	CampaignState.delete_save()
+	assert(not CampaignState.has_save(), "delete_save must remove the file")
+
 	# Windowed runs also drop a screenshot for eyeballing the layout.
 	if DisplayServer.get_name() != "headless":
 		CampaignState.gold = 21

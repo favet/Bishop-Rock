@@ -143,6 +143,7 @@ func start_day() -> void:
 	day += 1
 	_roll_day_flavor()
 	_log_telemetry("dawn")
+	save_run()
 	changed.emit()
 
 const TELEMETRY_PATH := "user://runs.csv"
@@ -173,6 +174,7 @@ func _log_telemetry(event: String) -> void:
 
 func set_night_result(stats: Dictionary) -> void:
 	last_night_stats = stats.duplicate(true)
+	save_run()
 	changed.emit()
 
 func spend(cost: Dictionary) -> bool:
@@ -495,6 +497,51 @@ func _advance_crops() -> void:
 func _open_farm_plots() -> int:
 	return farm_plots - active_crops.size()
 
+const SAVE_PATH := "user://save.cfg"
+const SAVE_VERSION := 1
+## Everything a run needs to resume at dawn. today_opportunity/weather are
+## derived from (run_seed, day) on load, so they aren't stored.
+const SAVE_FIELDS: Array[String] = [
+	"run_seed", "mercy", "day", "hull", "max_hull", "energy_max",
+	"energy_today", "tomorrow_energy_bonus", "gold", "wood", "scrap", "food",
+	"tools", "mines", "barricades", "farm_plots", "active_crops",
+	"active_projects", "completed_projects", "upgrades", "turret_unlocked",
+	"clean_lens_active", "last_night_stats", "daily_caps", "scouted_profile",
+	"run_kills", "run_gold_earned", "run_perfects",
+]
+
+## Checkpoints: every dawn, after each night result, and when Start Night is
+## pressed. ponytail: quitting mid-day rolls back to the latest checkpoint —
+## add per-action saves if playtesters complain about lost afternoons.
+func save_run() -> void:
+	if not is_inside_tree():
+		return  # bare RunState instances (policy sims, checks) never persist
+	var cfg := ConfigFile.new()
+	cfg.set_value("save", "version", SAVE_VERSION)
+	for field in SAVE_FIELDS:
+		cfg.set_value("save", field, get(field))
+	cfg.save(SAVE_PATH)
+
+func has_save() -> bool:
+	return FileAccess.file_exists(SAVE_PATH)
+
+func load_run() -> bool:
+	var cfg := ConfigFile.new()
+	if cfg.load(SAVE_PATH) != OK or int(cfg.get_value("save", "version", 0)) != SAVE_VERSION:
+		return false
+	for field in SAVE_FIELDS:
+		if field == "active_crops":
+			active_crops.assign(cfg.get_value("save", field, []))  # typed-array copy
+		else:
+			set(field, cfg.get_value("save", field, get(field)))
+	_roll_day_flavor()
+	changed.emit()
+	return true
+
+func delete_save() -> void:
+	if has_save():
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+
 const RECORDS_PATH := "user://records.cfg"
 
 ## Persist the run's result; returns {best_nights, new_record, total_runs}
@@ -514,6 +561,7 @@ func record_death() -> Dictionary:
 	cfg.set_value("records", "total_runs", total_runs)
 	cfg.save(RECORDS_PATH)
 	_log_telemetry("death")
+	delete_save()  # the run is over; no Continue back into a lost lighthouse
 	return {"best_nights": best, "new_record": new_record, "total_runs": total_runs}
 
 ## Fresh RNG seeded from (run seed, day): the same night replays identically

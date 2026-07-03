@@ -119,6 +119,17 @@ func _show_start_screen() -> void:
 	var mercy := CheckBox.new()
 	mercy.text = "Keeper's Mercy - slower boats, wider beam, softer crashes"
 	list.add_child(mercy)
+	if CampaignState.has_save():
+		var resume := Button.new()
+		resume.text = "Continue Campaign"
+		resume.custom_minimum_size = Vector2(0, 40)
+		resume.pressed.connect(func() -> void:
+			if CampaignState.load_run():
+				Sfx.play("ui_click")
+				_clear_campaign_layer()
+				_show_day_hub()  # resume at dawn; Start Night reloads into the raid
+		)
+		list.add_child(resume)
 	var start := Button.new()
 	start.text = "Start New Campaign"
 	start.custom_minimum_size = Vector2(0, 44)
@@ -268,6 +279,7 @@ func _show_day_hub() -> void:
 	_start_night_label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	start.pressed.connect(func() -> void:
 		Sfx.play("ui_click")
+		CampaignState.save_run()  # crash mid-night resumes at this dusk
 		Engine.time_scale = 1.0
 		get_tree().reload_current_scene()
 	)
@@ -354,8 +366,19 @@ func _project_card(project_id: String) -> VBoxContainer:
 	var cost: Dictionary = project["start_cost"]
 	for key in cost.keys():
 		_have_need_row(inner, key, int(CampaignState.get(key)), int(cost[key]))
+	# Work is progress, not a shortfall — "0/2 Daylight" in red read as "you
+	# can't afford this" when it meant "no work done yet".
 	var work_done := int(CampaignState.active_projects.get(project_id, {}).get("work_done", 0))
-	_have_need_row(inner, "daylight_work", work_done, int(project["work_required"]))
+	var work_row := HBoxContainer.new()
+	work_row.add_theme_constant_override("separation", 6)
+	inner.add_child(work_row)
+	work_row.add_child(ResourceIcon.new("daylight", 24))
+	var work_label := Label.new()
+	work_label.text = "Work done %d/%d (costs Daylight)" % [work_done, int(project["work_required"])]
+	work_label.add_theme_font_size_override("font_size", 15)
+	work_label.add_theme_color_override("font_color",
+		GREEN if work_done >= int(project["work_required"]) else MUTED)
+	work_row.add_child(work_label)
 	if not CampaignState.can_afford(cost) and not CampaignState.active_projects.has(project_id) and not CampaignState.completed_projects.has(project_id):
 		_small_label(inner, "Missing", RED)
 		for key in cost.keys():
