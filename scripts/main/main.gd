@@ -310,28 +310,39 @@ func _rebuild_day_cards() -> void:
 		_light_list.add_child(_action_card(action))
 	for action in _actions_for_group("provisions"):
 		_prov_list.add_child(_action_card(action))
+	# Completed projects collapse to one badge line; their card earned
+	# retirement, not permanent Workshop space.
+	var built: Array[String] = []
 	for project_id in CampaignState.START_PROJECTS:
-		_project_list.add_child(_project_card(project_id))
+		if CampaignState.completed_projects.has(project_id):
+			built.append(CampaignState.project_def(project_id)["display_name"])
+		else:
+			_project_list.add_child(_project_card(project_id))
+	if not built.is_empty():
+		_small_label(_project_list, "Built: %s" % ", ".join(built), GREEN)
 
 func _action_card(action: Dictionary) -> Button:
 	var button := _base_card_button()
 	button.tooltip_text = action.get("tooltip", "")
-	var daylight_cost := _daylight_cost(action.get("cost", {}))
+	var cost: Dictionary = action.get("cost", {})
+	var daylight_cost := _daylight_cost(cost)
 	button.mouse_entered.connect(_set_daylight_preview.bind(daylight_cost))
 	button.mouse_exited.connect(_set_daylight_preview.bind(0))
+	# Unaffordable reads at a glance, before any text does.
+	if not CampaignState.can_afford(cost):
+		button.modulate = Color(1, 1, 1, 0.55)
+	# Today's opportunity gets brass trim — the day's one novelty must pop.
+	if action.get("opportunity", false):
+		button.add_theme_stylebox_override("normal", _panel_style(Color(0.10, 0.09, 0.06), BRASS, 2))
 	var rows := VBoxContainer.new()
 	rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	rows.add_theme_constant_override("separation", 3)
 	rows.position = Vector2(12, 8)
 	button.add_child(rows)
 	_card_title(rows, action["name"], action["effect"], false)
-	var cost: Dictionary = action.get("cost", {})
 	for key in cost.keys():
 		_have_need_row(rows, key, int(CampaignState.get(key)), int(cost[key]))
-	var gain: Dictionary = action.get("gain", {})
-	if not gain.is_empty():
-		_small_label(rows, "REWARD", BRASS, false)
-		_trade_rows(rows, gain, GREEN, "+")
+	_trade_rows(rows, action.get("gain", {}), GREEN, "+")
 	if action.has("note"):
 		_small_label(rows, action["note"], MUTED, false)
 	# A Button doesn't grow to fit manual children — size it to the content
@@ -427,17 +438,19 @@ func _actions_for_group(group: String) -> Array[Dictionary]:
 		if id == "dive_wreckage":
 			var bonus: Dictionary = CampaignState.salvage_dive_bonus()
 			if int(bonus["wood"]) > 0 or int(bonus["scrap"]) > 0:
-				entry["note"] = "Once per day. Last night's wrecks\nand crates sweeten the dive."
+				entry["note"] = "Once per day. Includes +%d timber from wrecks,\n+%d iron from crates." % [
+					int(bonus["wood"]), int(bonus["scrap"])]
 		out.append(entry)
-	# Today's rotating opportunity, if it belongs to this group and is unused.
+	# Today's rotating opportunity: pinned first with brass trim — the day's
+	# one novelty must never hide below a scroll fold.
 	var opp_id: String = CampaignState.today_opportunity
 	if not opp_id.is_empty() and not CampaignState.daily_caps.get("opportunity", false):
 		var opp: Dictionary = CampaignState.OPPORTUNITIES[opp_id]
 		if opp["zone"] == group:
-			out.append({
+			out.insert(0, {
 				"id": opp_id, "name": opp["name"], "effect": opp["effect"],
 				"cost": opp["cost"], "gain": CampaignState.action_gain(opp_id),
-				"note": "Opportunity - today only.",
+				"note": "Opportunity - today only.", "opportunity": true,
 			})
 	return out
 
@@ -622,7 +635,12 @@ func _have_need_row(parent: VBoxContainer, key: String, have: int, need: int) ->
 	if not kind.is_empty():
 		row.add_child(ResourceIcon.new(kind, 24))
 	var label := Label.new()
-	label.text = "%d/%d %s" % [have, need, _display_resource_name(key)]
+	# Daylight's "have" already lives in the top-bar tokens (with hover
+	# ghosting) — repeating it as X/N here was number soup.
+	if key == "energy_today":
+		label.text = "Daylight %d" % need
+	else:
+		label.text = "%d/%d %s" % [have, need, _display_resource_name(key)]
 	label.add_theme_font_size_override("font_size", 15)
 	label.add_theme_color_override("font_color", color)
 	row.add_child(label)
