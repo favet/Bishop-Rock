@@ -11,10 +11,11 @@ func _init() -> void:
 	assert(state.raid_profile()["heavy_weight"] == 0.0)
 	assert(state.perform_action("gather_driftwood").contains("timber"))
 	assert(state.wood == 12)
-	assert(state.perform_action("make_tool").begins_with("Missing"))
-	state.scrap = 5
-	assert(state.perform_action("make_tool").contains("part"))
-	assert(state.tools == 1)
+	state.scrap = 0
+	assert(state.perform_action("craft_mines").begins_with("Missing"))
+	state.scrap = 3
+	assert(state.perform_action("craft_mines").contains("mines"))
+	assert(state.mines == 2)
 	state.food = 3
 	assert(state.perform_action("hearty_supper").contains("Tomorrow"))
 	assert(state.perform_action("hearty_supper").contains("done for today"))

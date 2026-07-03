@@ -6,18 +6,21 @@ signal changed
 ## Four projects, each a power spike the player can SEE working at night.
 ## The +5% tier was deleted, not rebalanced — sub-perceptual upgrades train
 ## apathy (see Docs/DAY_REDESIGN.md).
+## Parts (the old "tools" currency) had one source and one sink — a click
+## tax, not a decision. Each part's cost (5 iron + 1 Daylight of machining)
+## is folded directly into the projects that needed it.
 const START_PROJECTS := {
 	"lens_crank_1": {
 		"display_name": "Lens Crank",
 		"effect": "Beam turns 25% faster",
-		"start_cost": {"gold": 18, "scrap": 4, "tools": 1},
-		"work_required": 1,
+		"start_cost": {"gold": 18, "scrap": 9},
+		"work_required": 2,
 	},
 	"rifle_breech_1": {
 		"display_name": "Rifle Breech",
 		"effect": "Reload 20% faster",
-		"start_cost": {"gold": 24, "scrap": 6, "tools": 1},
-		"work_required": 2,
+		"start_cost": {"gold": 24, "scrap": 11},
+		"work_required": 3,
 	},
 	"reinforced_hull_1": {
 		"display_name": "Reinforced Hull",
@@ -28,8 +31,8 @@ const START_PROJECTS := {
 	"rusty_autoturret": {
 		"display_name": "Rusty Autoturret",
 		"effect": "A second gun fires on its own",
-		"start_cost": {"gold": 40, "scrap": 12, "tools": 2},
-		"work_required": 3,
+		"start_cost": {"gold": 40, "scrap": 20},
+		"work_required": 4,
 	},
 }
 
@@ -45,7 +48,6 @@ var gold: int
 var wood: int
 var scrap: int
 var food: int
-var tools: int
 var mines: int
 var barricades: int
 var active_projects: Dictionary
@@ -77,7 +79,6 @@ func reset_campaign(seed_value: int = -1, mercy_enabled: bool = false) -> void:
 	wood = 8
 	scrap = 2
 	food = 3
-	tools = 0
 	mines = 0
 	barricades = 0
 	active_projects = {}
@@ -119,11 +120,11 @@ func _log_telemetry(event: String) -> void:
 		file.seek_end()
 	else:
 		file = FileAccess.open(TELEMETRY_PATH, FileAccess.WRITE)
-		file.store_line("seed,day,event,hull,max_hull,gold,wood,scrap,food,tools,mines,barricades,night_kills,night_crashed,night_gold")
+		file.store_line("seed,day,event,hull,max_hull,gold,wood,scrap,food,mines,barricades,night_kills,night_crashed,night_gold")
 	if file == null:
 		return
-	file.store_line("%d,%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d" % [
-		run_seed, day, event, hull, max_hull, gold, wood, scrap, food, tools,
+	file.store_line("%d,%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d" % [
+		run_seed, day, event, hull, max_hull, gold, wood, scrap, food,
 		mines, barricades, int(last_night_stats.get("kills", 0)),
 		int(last_night_stats.get("crashed", 0)), int(last_night_stats.get("gold_earned", 0))])
 	file.close()
@@ -168,8 +169,6 @@ func _display_name(key: String) -> String:
 			return "Iron"
 		"food":
 			return "Rations"
-		"tools":
-			return "Parts"
 	return key.capitalize()
 
 ## Every action's definition lives here and only here — the day UI renders
@@ -192,12 +191,6 @@ const ACTIONS := {
 		"name": "Build Barricade", "zone": "light", "effect": "Eats most of the next crash",
 		"cost": {"energy_today": 1, "wood": 4}, "gain": {"barricades": 1},
 		"log": "Built a barricade.",
-	},
-	"make_tool": {
-		"name": "Machine a Part", "zone": "light", "effect": "Fabricate one precision part",
-		"cost": {"energy_today": 1, "scrap": 5}, "gain": {"tools": 1},
-		"log": "Machined a part.",
-		"note": "Needed for the Lens Crank, Rifle Breech,\nand Rusty Autoturret projects.",
 	},
 	"gather_driftwood": {
 		"name": "Gather Driftwood", "zone": "provisions", "effect": "Comb the shore for timber",
@@ -254,9 +247,9 @@ const OPPORTUNITIES := {
 		"log": "A rare unhurried morning.",
 	},
 	"travelling_smith": {
-		"name": "Travelling Smith", "zone": "light", "effect": "A smith offers cut-rate work",
-		"cost": {"energy_today": 1, "gold": 6}, "gain": {"tools": 1},
-		"log": "The smith machined a part for cheap.",
+		"name": "Travelling Smith", "zone": "light", "effect": "Buy off-cut iron cheap",
+		"cost": {"energy_today": 1, "gold": 6}, "gain": {"scrap": 5},
+		"log": "Bought the smith's off-cuts.",
 	},
 }
 
@@ -375,13 +368,13 @@ func _apply_project(project_id: String) -> void:
 	changed.emit()
 
 const SAVE_PATH := "user://save.cfg"
-const SAVE_VERSION := 2  # v1 saves (farming/scout era) are discarded
+const SAVE_VERSION := 3  # v2 saves (Parts era) are discarded
 ## Everything a run needs to resume at dawn. today_opportunity/weather are
 ## derived from (run_seed, day) on load, so they aren't stored.
 const SAVE_FIELDS: Array[String] = [
 	"run_seed", "mercy", "day", "hull", "max_hull", "energy_max",
 	"energy_today", "tomorrow_energy_bonus", "gold", "wood", "scrap", "food",
-	"tools", "mines", "barricades",
+	"mines", "barricades",
 	"active_projects", "completed_projects", "upgrades", "turret_unlocked",
 	"last_night_stats", "daily_caps",
 	"run_kills", "run_gold_earned", "run_perfects",

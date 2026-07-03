@@ -64,9 +64,6 @@ func _draw() -> void:
 			]), BRASS)
 			draw_rect(Rect2(c + Vector2(-s * 0.11, -s * 0.26), Vector2(s * 0.22, s * 0.10)), BRASS_LIGHT)
 			draw_circle(c + Vector2(0, -s * 0.30), s * 0.07, BRASS_LIGHT)
-		"tools":
-			_bar(c + Vector2(s * 0.04, s * 0.08), s * 0.42, s * 0.09, deg_to_rad(52), BRASS_DEEP)
-			_bar(c + Vector2(-s * 0.10, -s * 0.14), s * 0.34, s * 0.16, deg_to_rad(-38), BRASS)
 		"mines":
 			draw_circle(c, s * 0.22, BRASS)
 			draw_circle(c, s * 0.10, BRASS_DEEP)
@@ -96,6 +93,6 @@ static func kind_for(resource_key: String) -> String:
 	match resource_key:
 		"energy_today", "tomorrow_daylight", "daylight_work":
 			return "daylight"
-		"gold", "wood", "scrap", "food", "hull", "tools", "mines", "barricades", "day":
+		"gold", "wood", "scrap", "food", "hull", "mines", "barricades", "day":
 			return resource_key
 	return ""

@@ -692,8 +692,6 @@ func _gain_hint(key: String) -> String:
 			return "Iron. Gain from Dive Wreckage, crashes, and opportunities."
 		"food":
 			return "Rations. Gain from Fishing and opportunities."
-		"tools":
-			return "Machine parts in Crafting. Needed for Lens Crank I, Rifle Breech I, and Rusty Autoturret."
 		"energy_today", "daylight_work":
 			return "Daylight is your work time for the day."
 	return ""
@@ -730,8 +728,6 @@ func _display_resource_name(key: String) -> String:
 			return "Iron"
 		"food":
 			return "Rations"
-		"tools":
-			return "Parts"
 		"mines":
 			return "Mine"
 		"barricades":
