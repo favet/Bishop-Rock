@@ -42,6 +42,10 @@ func _init() -> void:
 	_captured.fill(false)
 
 func _ready() -> void:
+	# Skip the title screen: a fresh day-1 campaign shows it, and this
+	# harness wants the night sim running immediately.
+	CampaignState.reset_campaign(42)
+	CampaignState.last_night_stats = {"night": 0}
 	add_child(MAIN.instantiate())
 
 func _process(delta: float) -> void:

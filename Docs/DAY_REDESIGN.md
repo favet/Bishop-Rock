@@ -54,7 +54,27 @@ Policy sim remains the guard: degenerate single-action play must die well
 before balanced play, and endless scaling must end every run. Retuned after
 the diet. Keeper's Mercy remains the relief valve.
 
+## Compelling-week pass (July 2026)
+
+- The day is a situation, not a menu: TODAY column carries the morning
+  consequence, the day's event card (news, not stock; passive events like
+  Calm Tide change rules instead of costing Daylight), and TONIGHT with a
+  threat line naming what answers it. Situation badges (HULL LOW / FOR
+  TONIGHT / TIMBER LOW) flag the 2-3 relevant cards.
+- Fishing is a cast-timing minigame (spot choice -> strike band; quality
+  poor->perfect by strikes landed) — the calm daytime mirror of the
+  charge shot. Skill beats the old button; botching deep water pays nothing.
+- Night reads as watched water: faint rings, compass ticks, sea speckle,
+  contact silhouettes, V wakes, sonar pings on spawn, "-N HULL" floats at
+  the tower, running earned tally in the HUD.
+- Projects carry a "why it matters" line and an "Almost ready: need 5
+  Iron" state when within 6 resources of start.
+- Top bar pairs icons with words; Start Night states weather + boat count
+  and warns about unspent Daylight; dawn ends with "The lighthouse still
+  stands." and "Begin Day N".
+
 ## Deferred
 
 Named hard nights ("Smugglers' Convoy"), per-boat sector forecast, action
-count > 8. Add only after the reduced loop proves fun.
+count > 8, rare-fish collection, illustrated island day hub. Add only
+after the reduced loop proves fun.
