@@ -36,12 +36,16 @@ var _elapsed: float = 0.0
 var _timer: float = 0.0
 var _gun: MainGun
 # Deterministic per (run seed, day): the same night replays with the same
-# boats regardless of restarts. Shareable seeds depend on this.
+# boats regardless of restarts. Boat TYPES come from CampaignState.night_plan()
+# — the same list the day forecast shows — so the forecast is true by
+# construction. Angles/speeds stay cosmetic randomness.
 var _rng: RandomNumberGenerator
+var _plan: Array[String] = []
 
 func _ready() -> void:
 	_timer = first_spawn_delay
 	_rng = CampaignState.night_rng()
+	_plan = CampaignState.night_plan()
 
 func _physics_process(delta: float) -> void:
 	if not active or wave_complete():
@@ -69,10 +73,10 @@ func wave_complete() -> bool:
 	return spawned_count >= wave_size
 
 func _pick_scene() -> PackedScene:
-	var roll := _rng.randf()
-	if roll < heavy_boat_weight and heavy_boat_scene != null:
+	var kind: String = _plan[spawned_count] if spawned_count < _plan.size() else "basic"
+	if kind == "heavy" and heavy_boat_scene != null:
 		return heavy_boat_scene
-	if roll < heavy_boat_weight + fast_boat_weight and fast_boat_scene != null:
+	if kind == "fast" and fast_boat_scene != null:
 		return fast_boat_scene
 	return boat_scene
 

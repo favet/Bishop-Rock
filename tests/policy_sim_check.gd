@@ -65,15 +65,15 @@ func _choose(state: RunState, policy: String) -> String:
 		"lumberjack":
 			return "gather_driftwood"
 	# Balanced keeper: repair first, keep mines stocked, keep timber for
-	# patches, earn otherwise.
+	# repairs, dive for iron, earn otherwise.
 	if state.hull <= state.max_hull - 12 and state.can_afford({"gold": 3, "wood": 2}):
 		return "patch_hull"
 	if state.wood < 4:
 		return "gather_driftwood"
 	if state.mines < 2 and state.can_afford({"gold": 4, "scrap": 3}):
 		return "craft_mines"
-	if state.scrap < 3:
-		return "sort_scrap"
+	if state.scrap < 3 and not state.daily_caps.get("dive_wreckage", false) and state.energy_today >= 2:
+		return "dive_wreckage"
 	return "fish"
 
 func _process(_delta: float) -> bool:

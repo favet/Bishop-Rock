@@ -31,12 +31,12 @@ var _hull_fill: ColorRect
 var _hull_label: Label
 var _daylight_tokens: Array[Control] = []
 var _daylight_preview_spend: int = 0
-var _zone_title: Label
-var _zone_buttons: Dictionary = {}
-var _action_list: VBoxContainer
+var _light_list: VBoxContainer
+var _prov_list: VBoxContainer
+var _project_list: VBoxContainer
+var _tonight_holder: VBoxContainer
 var _log_label: Label
 var _start_night_label: Label
-var _selected_zone: String = "Repairs"
 
 @onready var _camera: Camera2D = $Camera2D
 
@@ -157,24 +157,28 @@ func _show_dawn(stats: Dictionary) -> void:
 	_card_title(list, "Dawn after Night %d" % int(stats["night"]), "The sea quiets. The damage remains.")
 	var consumed: Dictionary = stats["defenses_consumed"]
 	for line in [
-		"Boats sunk: %d" % int(stats["kills"]),
+		"Boats sunk: %d (%d perfect)" % [int(stats["kills"]), int(stats.get("perfects", 0))],
 		"Boats crashed: %d" % int(stats["crashed"]),
 		"Shillings earned: %d" % int(stats["gold_earned"]),
-		"Perfect bonuses: %d" % int(stats["perfect_bonus_earned"]),
 		"Hull damage taken: %d" % int(stats["hull_damage_taken"]),
 		"Hull: %d/%d" % [int(stats["hull"]), int(stats["max_hull"])],
-		"Defenses consumed: %d mines, %d barricades" % [int(consumed.get("mines", 0)), int(consumed.get("barricades", 0))],
-		"Repair to full would require approximately: %s" % _repair_hint(),
+		"Repair to full: about %s" % _repair_hint(),
 	]:
 		_small_label(list, line, TEXT)
+	# Attribution: purchases must be seen paying off or they stop happening.
+	if int(consumed.get("mines", 0)) > 0:
+		_small_label(list, "Your mines fired %d time%s." % [int(consumed["mines"]),
+			"s" if int(consumed["mines"]) > 1 else ""], BRASS)
+	if int(consumed.get("barricades", 0)) > 0:
+		_small_label(list, "A barricade ate most of a crash.", BRASS)
 	var salvage: Dictionary = CampaignState.salvage_dive_bonus()
 	if int(salvage["wood"]) > 0 or int(salvage["scrap"]) > 0:
 		_small_label(list, "Wreckage litters the shallows - today's dive will be rich.", BRASS)
 	# First three dawns teach, one line each. No tutorial system.
 	var hints := {
-		1: "Keeper's note: patch the hull before nightfall - crashes cost more than repairs.",
-		2: "Keeper's note: salvage iron and machine parts to unlock workshop projects.",
-		3: "Keeper's note: rest or a cooked meal today means more Daylight tomorrow.",
+		1: "Keeper's note: repair the hull before nightfall - crashes cost more than repairs.",
+		2: "Keeper's note: check TONIGHT before spending - mines answer heavy hulls.",
+		3: "Keeper's note: a hearty supper today means two extra Daylight tomorrow.",
 	}
 	if hints.has(int(stats["night"])):
 		_small_label(list, hints[int(stats["night"])], MUTED)
@@ -188,8 +192,10 @@ func _show_dawn(stats: Dictionary) -> void:
 	)
 	list.add_child(button)
 
+## One screen, no navigation: every card visible at once. Left column
+## answers tonight, middle column funds tomorrow, right column shows what
+## tonight actually is (the forecast is exact) plus the workshop.
 func _show_day_hub() -> void:
-	_zone_buttons.clear()
 	_day_root = Control.new()
 	_day_root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_campaign_layer.add_child(_day_root)
@@ -216,52 +222,37 @@ func _show_day_hub() -> void:
 	body.add_theme_constant_override("separation", 14)
 	layout.add_child(body)
 
-	var zones := GridContainer.new()
-	zones.columns = 2
-	zones.custom_minimum_size = Vector2(420, 500)
-	zones.add_theme_constant_override("h_separation", 12)
-	zones.add_theme_constant_override("v_separation", 12)
-	body.add_child(zones)
-	for zone in ["Repairs", "Crafting", "Supplies", "Rest"]:
-		zones.add_child(_zone_card(zone))
+	_light_list = _card_column(body, "KEEP THE LIGHT")
+	_prov_list = _card_column(body, "PROVISIONS")
 
-	var detail_panel := PanelContainer.new()
-	detail_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	detail_panel.add_theme_stylebox_override("panel", _panel_style(PANEL, BRASS, 2))
-	body.add_child(detail_panel)
-	var detail_margin := MarginContainer.new()
-	for side in ["left", "right", "top", "bottom"]:
-		detail_margin.add_theme_constant_override("margin_" + side, 14)
-	detail_panel.add_child(detail_margin)
-	var panel := VBoxContainer.new()
-	panel.add_theme_constant_override("separation", 10)
-	detail_margin.add_child(panel)
-	_zone_title = Label.new()
-	_zone_title.add_theme_font_size_override("font_size", 24)
-	_zone_title.add_theme_color_override("font_color", BRASS)
-	panel.add_child(_zone_title)
-	# Scroll keeps tall zones (Crafting/Supplies project lists) from pushing
-	# the footer — Start Night must never move on zone switch.
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	panel.add_child(scroll)
-	_action_list = VBoxContainer.new()
-	_action_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_action_list.add_theme_constant_override("separation", 8)
-	scroll.add_child(_action_list)
-	_log_label = Label.new()
-	_log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_log_label.custom_minimum_size = Vector2(0, 42)
-	_log_label.add_theme_color_override("font_color", MUTED)
-	panel.add_child(_log_label)
+	var right := VBoxContainer.new()
+	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right.add_theme_constant_override("separation", 10)
+	body.add_child(right)
+	_tonight_holder = VBoxContainer.new()
+	right.add_child(_tonight_holder)
+	var workshop := Label.new()
+	workshop.text = "WORKSHOP"
+	workshop.add_theme_font_size_override("font_size", 18)
+	workshop.add_theme_color_override("font_color", BRASS)
+	right.add_child(workshop)
+	var project_scroll := ScrollContainer.new()
+	project_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	project_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	right.add_child(project_scroll)
+	_project_list = VBoxContainer.new()
+	_project_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_project_list.add_theme_constant_override("separation", 8)
+	project_scroll.add_child(_project_list)
 
 	var footer := HBoxContainer.new()
 	footer.add_theme_constant_override("separation", 14)
 	layout.add_child(footer)
-	var defenses := _defense_strip()
-	defenses.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	footer.add_child(defenses)
+	_log_label = Label.new()
+	_log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_log_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_log_label.add_theme_color_override("font_color", MUTED)
+	footer.add_child(_log_label)
 	var start := Button.new()
 	start.name = "FixedStartNightButton"
 	start.custom_minimum_size = Vector2(330, 64)
@@ -286,35 +277,41 @@ func _show_day_hub() -> void:
 	footer.add_child(start)
 
 	_refresh_day_ui()
-	_select_zone(_selected_zone)
+	_rebuild_day_cards()
 
-func _select_zone(zone: String) -> void:
-	_selected_zone = zone
-	_zone_title.text = zone
-	for z in _zone_buttons:
-		var selected: bool = z == zone
-		_zone_buttons[z].add_theme_stylebox_override("normal",
-			_panel_style(PANEL_HOVER if selected else PANEL, BRASS if selected else BRASS_DARK, 3 if selected else 2))
-	for child in _action_list.get_children():
-		child.queue_free()
-	for action in _actions_for_zone(zone):
-		_action_list.add_child(_action_card(action))
-	for project_id in CampaignState.projects_for_zone(zone):
-		_action_list.add_child(_project_card(project_id))
+func _card_column(parent: HBoxContainer, title: String) -> VBoxContainer:
+	var column := VBoxContainer.new()
+	column.custom_minimum_size = Vector2(370, 0)
+	column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_theme_constant_override("separation", 8)
+	parent.add_child(column)
+	var header := Label.new()
+	header.text = title
+	header.add_theme_font_size_override("font_size", 18)
+	header.add_theme_color_override("font_color", BRASS)
+	column.add_child(header)
+	# Scroll keeps tall card stacks from swallowing the footer — Start Night
+	# must always be on screen.
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	column.add_child(scroll)
+	var list := VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 8)
+	scroll.add_child(list)
+	return list
 
-func _zone_card(zone: String) -> Button:
-	var card := Button.new()
-	card.text = _zone_label(zone)
-	card.custom_minimum_size = Vector2(204, 180)
-	card.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	card.add_theme_font_size_override("font_size", 17)
-	card.add_theme_color_override("font_color", TEXT)
-	card.add_theme_stylebox_override("normal", _panel_style(PANEL, BRASS_DARK, 2))
-	card.add_theme_stylebox_override("hover", _panel_style(PANEL_HOVER, BRASS, 2))
-	card.pressed.connect(_select_zone.bind(zone))
-	card.pressed.connect(Sfx.play.bind("ui_click"))
-	_zone_buttons[zone] = card
-	return card
+func _rebuild_day_cards() -> void:
+	for list in [_light_list, _prov_list, _project_list]:
+		for child in list.get_children():
+			child.queue_free()
+	for action in _actions_for_group("light"):
+		_light_list.add_child(_action_card(action))
+	for action in _actions_for_group("provisions"):
+		_prov_list.add_child(_action_card(action))
+	for project_id in CampaignState.START_PROJECTS:
+		_project_list.add_child(_project_card(project_id))
 
 func _action_card(action: Dictionary) -> Button:
 	var button := _base_card_button()
@@ -346,7 +343,7 @@ func _action_card(action: Dictionary) -> Button:
 		_log_label.text = CampaignState.perform_action(action["id"])
 		_set_daylight_preview(0)
 		_refresh_day_ui()
-		_select_zone(_selected_zone)
+		_rebuild_day_cards()
 	)
 	return button
 
@@ -405,18 +402,18 @@ func _project_card(project_id: String) -> VBoxContainer:
 			_log_label.text = CampaignState.start_project(project_id)
 		_set_daylight_preview(0)
 		_refresh_day_ui()
-		_select_zone(_selected_zone)
+		_rebuild_day_cards()
 	)
 	box.add_child(button)
 	return box
 
 ## Cards render straight from CampaignState.ACTIONS — one source of truth
 ## for both display and spend. Only presentation tweaks happen here.
-func _actions_for_zone(zone: String) -> Array[Dictionary]:
+func _actions_for_group(group: String) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for id in CampaignState.ACTIONS:
 		var def: Dictionary = CampaignState.ACTIONS[id]
-		if def["zone"] != zone:
+		if def["zone"] != group:
 			continue
 		var entry := {
 			"id": id,
@@ -431,16 +428,12 @@ func _actions_for_zone(zone: String) -> Array[Dictionary]:
 			var bonus: Dictionary = CampaignState.salvage_dive_bonus()
 			if int(bonus["wood"]) > 0 or int(bonus["scrap"]) > 0:
 				entry["note"] = "Once per day. Last night's wrecks\nand crates sweeten the dive."
-		if id == "scout_raid" and not CampaignState.scouted_profile.is_empty():
-			entry["effect"] = "%s, about %d boats" % [
-				CampaignState.scouted_profile["profile_name"],
-				int(CampaignState.scouted_profile["wave_size"])]
 		out.append(entry)
-	# Today's rotating opportunity, if it belongs to this zone and is unused.
+	# Today's rotating opportunity, if it belongs to this group and is unused.
 	var opp_id: String = CampaignState.today_opportunity
 	if not opp_id.is_empty() and not CampaignState.daily_caps.get("opportunity", false):
 		var opp: Dictionary = CampaignState.OPPORTUNITIES[opp_id]
-		if opp["zone"] == zone:
+		if opp["zone"] == group:
 			out.append({
 				"id": opp_id, "name": opp["name"], "effect": opp["effect"],
 				"cost": opp["cost"], "gain": CampaignState.action_gain(opp_id),
@@ -460,23 +453,41 @@ func _refresh_day_ui() -> void:
 		_top_bar.add_child(_resource_badge(key, str(CampaignState.get(key))))
 	_top_bar.add_child(_resource_badge("day", str(CampaignState.day)))
 	if _start_night_label != null:
-		var profile := CampaignState.raid_profile()
-		_start_night_label.text = "START NIGHT %d\n%s - %d boats - %s" % [
-			CampaignState.day, profile["profile_name"], int(profile["wave_size"]),
-			RunState.WEATHERS[CampaignState.weather]["label"]]
+		_start_night_label.text = "START NIGHT %d\n%s" % [
+			CampaignState.day, RunState.WEATHERS[CampaignState.weather]["label"]]
+	if _tonight_holder != null:
+		for child in _tonight_holder.get_children():
+			child.queue_free()
+		_tonight_holder.add_child(_tonight_panel())
 	_update_daylight_tokens()
 
-func _zone_label(zone: String) -> String:
-	match zone:
-		"Repairs":
-			return "REPAIRS\nHull, lens, lighthouse work"
-		"Crafting":
-			return "CRAFTING\nIron, parts, mines, defenses"
-		"Supplies":
-			return "SUPPLIES\nTimber, rations, salvage, crops"
-		"Rest":
-			return "REST\nMeals, daylight, scouting"
-	return zone
+## The night's exact composition, weather, and your standing defenses — the
+## question the day's spending is supposed to answer.
+func _tonight_panel() -> PanelContainer:
+	var wrap := PanelContainer.new()
+	wrap.add_theme_stylebox_override("panel", _panel_style(Color(0.07, 0.085, 0.095), BRASS, 2))
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 4)
+	wrap.add_child(box)
+	var title := Label.new()
+	title.text = "TONIGHT"
+	title.add_theme_font_size_override("font_size", 18)
+	title.add_theme_color_override("font_color", BRASS)
+	box.add_child(title)
+	var profile := CampaignState.raid_profile()
+	_small_label(box, CampaignState.forecast_text(), TEXT, false)
+	_small_label(box, "%s - %s" % [profile["profile_name"],
+		RunState.WEATHERS[CampaignState.weather]["label"]], MUTED, false)
+	var defenses := HBoxContainer.new()
+	defenses.add_theme_constant_override("separation", 8)
+	box.add_child(defenses)
+	defenses.add_child(ResourceIcon.new("mines", 24))
+	_small_label(defenses, "Mines %d" % CampaignState.mines, TEXT, false)
+	defenses.add_child(ResourceIcon.new("barricades", 24))
+	_small_label(defenses, "Barricades %d" % CampaignState.barricades, TEXT, false)
+	if CampaignState.night_plan().has("heavy") and CampaignState.mines == 0:
+		_small_label(box, "Heavy hulls shrug off single shots - mines answer them.", RED)
+	return wrap
 
 func _hull_resource() -> PanelContainer:
 	var wrap := _resource_shell("HULL", _resource_tooltip("hull"))
@@ -644,24 +655,6 @@ func _panel_style(fill: Color, border: Color, border_width: int) -> StyleBoxFlat
 	style.content_margin_bottom = 8
 	return style
 
-func _defense_strip() -> PanelContainer:
-	var wrap := PanelContainer.new()
-	wrap.add_theme_stylebox_override("panel", _panel_style(Color(0.07, 0.085, 0.095), BRASS_DARK, 1))
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
-	wrap.add_child(row)
-	_small_label(row, "TONIGHT'S DEFENSES", BRASS, false)
-	row.add_child(ResourceIcon.new("mines", 26))
-	_small_label(row, "Mines %d" % CampaignState.mines, TEXT, false)
-	row.add_child(ResourceIcon.new("barricades", 26))
-	_small_label(row, "Barricades %d" % CampaignState.barricades, TEXT, false)
-	if not CampaignState.scouted_profile.is_empty():
-		_small_label(row, "Scout: %s" % CampaignState.scouted_profile["profile_name"], MUTED, false)
-	if not CampaignState.today_opportunity.is_empty() and not CampaignState.daily_caps.get("opportunity", false):
-		var opp: Dictionary = CampaignState.OPPORTUNITIES[CampaignState.today_opportunity]
-		_small_label(row, "Opportunity: %s (%s)" % [opp["name"], opp["zone"]], BRASS, false)
-	return wrap
-
 func _daylight_cost(cost: Dictionary) -> int:
 	return int(cost.get("energy_today", 0))
 
@@ -678,9 +671,9 @@ func _gain_hint(key: String) -> String:
 		"wood":
 			return "Timber. Gain from Gather Driftwood or Dive Wreckage."
 		"scrap":
-			return "Iron. Gain from Sort Salvage or Dive Wreckage."
+			return "Iron. Gain from Dive Wreckage, crashes, and opportunities."
 		"food":
-			return "Rations. Gain from Fishing and crops."
+			return "Rations. Gain from Fishing and opportunities."
 		"tools":
 			return "Machine parts in Crafting. Needed for Lens Crank I, Rifle Breech I, and Rusty Autoturret."
 		"energy_today", "daylight_work":
@@ -692,15 +685,15 @@ func _resource_tooltip(key: String) -> String:
 		"hull":
 			return "Hull\nLighthouse durability. Boats that crash damage Hull. Repair it during the day."
 		"energy_today":
-			return "Daylight\nYour work time for the day. Most actions spend Daylight. Rest or Cook can improve tomorrow."
+			return "Daylight\nYour work time for the day. Most actions spend Daylight. A Hearty Supper adds two tomorrow."
 		"gold":
 			return "Shillings\nUsed for repairs, projects, crafting, and supplies. Earned by sinking boats and fishing."
 		"wood":
-			return "Timber\nUsed for repairs, barricades, farm work, and hull projects. Gain from Gather Driftwood or Dive Wreckage."
+			return "Timber\nUsed for repairs, barricades, and hull projects. Gain from Gather Driftwood or Dive Wreckage."
 		"scrap":
-			return "Iron\nUsed for mines, parts, gun upgrades, and turret work. Gain from Sort Salvage or Dive Wreckage."
+			return "Iron\nUsed for mines, parts, and turret work. Gain from Dive Wreckage, crashes, and opportunities."
 		"food":
-			return "Rations\nUsed for meals and planting. Gain from Fishing and crops."
+			return "Rations\nUsed for the Hearty Supper. Gain from Fishing and opportunities."
 		"day":
 			return "Day\nSurvive nights, spend daylight, and keep the lighthouse standing."
 	return ""
@@ -727,12 +720,6 @@ func _display_resource_name(key: String) -> String:
 			return "Barricade"
 		"hull":
 			return "Hull"
-		"handling":
-			return "Handling"
-		"crop":
-			return "Crop"
-		"forecast":
-			return "Forecast"
 		"day":
 			return "Day"
 	return key.capitalize()
@@ -741,14 +728,7 @@ func _repair_hint() -> String:
 	var missing := CampaignState.max_hull - CampaignState.hull
 	if missing <= 0:
 		return "no repairs"
-	var full := missing / 22
-	var patch := int(ceil(float(missing % 22) / 10.0))
-	var parts: Array[String] = []
-	if full > 0:
-		parts.append("%d Full Repair" % full)
-	if patch > 0:
-		parts.append("%d Patch" % patch)
-	return " + ".join(parts)
+	return "%d Repair Hull action%s" % [ceili(missing / 12.0), "s" if missing > 12 else ""]
 
 func _clear_campaign_layer() -> void:
 	for child in _campaign_layer.get_children():

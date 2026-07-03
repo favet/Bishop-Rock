@@ -132,10 +132,6 @@ func _apply_campaign_profile() -> void:
 	if CampaignState.mercy:
 		_beam.cone_half_angle_deg *= 1.25
 	_gun.reload_time *= CampaignState.reload_multiplier()
-	var perfect_bonus := CampaignState.perfect_zone_bonus()
-	if perfect_bonus > 0.0:
-		_gun.perfect_zone_min = maxf(_gun.bonus_zone_min, _gun.perfect_zone_min - perfect_bonus)
-		_gun.perfect_zone_max = minf(_gun.bonus_zone_max, _gun.perfect_zone_max + perfect_bonus)
 	_turret.enabled = CampaignState.turret_unlocked
 	if not bool(profile.get("use_v0_hazards", false)):
 		for child in _hazards.get_children():
@@ -173,7 +169,6 @@ func _check_for_dawn() -> void:
 	}
 	if campaign_mode:
 		CampaignState.hull = int(lighthouse.health)
-		CampaignState.clean_lens_active = false
 		CampaignState.set_night_result(stats)
 	night_won.emit(stats)
 

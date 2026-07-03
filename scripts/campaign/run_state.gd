@@ -3,69 +3,33 @@ extends Node
 
 signal changed
 
+## Four projects, each a power spike the player can SEE working at night.
+## The +5% tier was deleted, not rebalanced — sub-perceptual upgrades train
+## apathy (see Docs/DAY_REDESIGN.md).
 const START_PROJECTS := {
-	"greased_crank": {
-		"display_name": "Greased Crank",
-		"zone": "Repairs",
-		"effect": "Beam turn speed +5%",
-		"start_cost": {"gold": 8, "scrap": 2},
-		"work_required": 1,
-	},
-	"breech_cleaning_kit": {
-		"display_name": "Breech Cleaning Kit",
-		"zone": "Crafting",
-		"effect": "Reload duration -5%",
-		"start_cost": {"gold": 10, "scrap": 3},
-		"work_required": 1,
-	},
-	"patch_frame": {
-		"display_name": "Patch Frame",
-		"zone": "Repairs",
-		"effect": "Patch hull repairs +2",
-		"start_cost": {"gold": 8, "wood": 4},
-		"work_required": 1,
-	},
-	"garden_bed_prep": {
-		"display_name": "Garden Bed Prep",
-		"zone": "Supplies",
-		"effect": "Potato harvest +1 food",
-		"start_cost": {"gold": 6, "wood": 4},
-		"work_required": 1,
-	},
-	"reinforced_hull_1": {
-		"display_name": "Reinforced Hull I",
-		"zone": "Repairs",
-		"effect": "Max hull +15 and heal +15",
-		"start_cost": {"gold": 30, "wood": 12, "scrap": 4},
-		"work_required": 2,
-	},
 	"lens_crank_1": {
-		"display_name": "Lens Crank I",
-		"zone": "Repairs",
-		"effect": "Beam turn speed +12%",
-		"start_cost": {"gold": 25, "scrap": 6, "tools": 1},
-		"work_required": 2,
+		"display_name": "Lens Crank",
+		"effect": "Beam turns 25% faster",
+		"start_cost": {"gold": 18, "scrap": 4, "tools": 1},
+		"work_required": 1,
 	},
 	"rifle_breech_1": {
-		"display_name": "Rifle Breech I",
-		"zone": "Crafting",
-		"effect": "Reload duration -10%",
-		"start_cost": {"gold": 35, "scrap": 8, "tools": 1},
+		"display_name": "Rifle Breech",
+		"effect": "Reload 20% faster",
+		"start_cost": {"gold": 24, "scrap": 6, "tools": 1},
 		"work_required": 2,
 	},
-	"build_plot_2": {
-		"display_name": "Build Plot II",
-		"zone": "Supplies",
-		"effect": "Farm plots +1",
-		"start_cost": {"gold": 18, "wood": 8},
+	"reinforced_hull_1": {
+		"display_name": "Reinforced Hull",
+		"effect": "Max hull +15 and heal +15",
+		"start_cost": {"gold": 24, "wood": 10, "scrap": 3},
 		"work_required": 2,
 	},
 	"rusty_autoturret": {
 		"display_name": "Rusty Autoturret",
-		"zone": "Crafting",
-		"effect": "Unlocks the shore turret",
-		"start_cost": {"gold": 55, "scrap": 14, "tools": 2},
-		"work_required": 4,
+		"effect": "A second gun fires on its own",
+		"start_cost": {"gold": 40, "scrap": 12, "tools": 2},
+		"work_required": 3,
 	},
 }
 
@@ -84,16 +48,12 @@ var food: int
 var tools: int
 var mines: int
 var barricades: int
-var farm_plots: int
-var active_crops: Array[Dictionary]
 var active_projects: Dictionary
 var completed_projects: Dictionary
 var upgrades: Dictionary
 var turret_unlocked: bool
-var clean_lens_active: bool
 var last_night_stats: Dictionary
 var daily_caps: Dictionary
-var scouted_profile: Dictionary
 # Whole-run tallies for the death score screen.
 var run_kills: int
 var run_gold_earned: int
@@ -108,8 +68,10 @@ func reset_campaign(seed_value: int = -1, mercy_enabled: bool = false) -> void:
 	day = 1
 	hull = 85
 	max_hull = 100
-	energy_max = 6
-	energy_today = 6
+	# 4 Daylight against 8+ actions: most days you take half of what you
+	# want. Scarcity is where the decisions live.
+	energy_max = 4
+	energy_today = 4
 	tomorrow_energy_bonus = 0
 	gold = 12
 	wood = 8
@@ -118,16 +80,12 @@ func reset_campaign(seed_value: int = -1, mercy_enabled: bool = false) -> void:
 	tools = 0
 	mines = 0
 	barricades = 0
-	farm_plots = 1
-	active_crops = []
 	active_projects = {}
 	completed_projects = {}
 	upgrades = {}
 	turret_unlocked = false
-	clean_lens_active = false
 	last_night_stats = {}
 	daily_caps = {}
-	scouted_profile = {}
 	run_kills = 0
 	run_gold_earned = 0
 	run_perfects = 0
@@ -135,11 +93,9 @@ func reset_campaign(seed_value: int = -1, mercy_enabled: bool = false) -> void:
 	changed.emit()
 
 func start_day() -> void:
-	_advance_crops()
 	daily_caps = {}
 	energy_today = energy_max + tomorrow_energy_bonus
 	tomorrow_energy_bonus = 0
-	scouted_profile = {}
 	day += 1
 	_roll_day_flavor()
 	_log_telemetry("dawn")
@@ -219,86 +175,51 @@ func _display_name(key: String) -> String:
 ## Every action's definition lives here and only here — the day UI renders
 ## from this table and perform_action() executes from it, so a price can
 ## never drift between what's shown and what's charged.
+## Eight actions in two groups ("light" = answer tonight, "provisions" =
+## fund tomorrow); the fifteen-action list glazed eyes — see DAY_REDESIGN.md.
 const ACTIONS := {
 	"patch_hull": {
-		"name": "Patch Damage", "zone": "Repairs", "effect": "Repair lighthouse hull",
-		"cost": {"energy_today": 1, "gold": 3, "wood": 2}, "gain": {"hull": 10},
-		"log": "Patched hull.",
-	},
-	"full_repair": {
-		"name": "Full Repair", "zone": "Repairs", "effect": "Major hull repair",
-		"cost": {"energy_today": 2, "gold": 6, "wood": 4}, "gain": {"hull": 22},
-		"log": "Repairs completed.",
-	},
-	"clean_lens": {
-		"name": "Clean Lens", "zone": "Repairs", "effect": "Easier beam handling tonight",
-		"cost": {"energy_today": 1}, "gain": {"handling": 1},
-		"log": "Lens cleaned for tonight.",
-	},
-	"sort_scrap": {
-		"name": "Sort Salvage", "zone": "Crafting", "effect": "Recover usable iron",
-		"cost": {"energy_today": 1}, "gain": {"scrap": 2},
-		"log": "Salvaged +2 iron.",
-	},
-	"make_tool": {
-		"name": "Machine a Part", "zone": "Crafting", "effect": "Fabricate one precision part",
-		"cost": {"energy_today": 1, "scrap": 5}, "gain": {"tools": 1},
-		"log": "Machined a part.",
-		"note": "Needed for Lens Crank I, Rifle Breech I,\nand Rusty Autoturret.",
+		"name": "Repair Hull", "zone": "light", "effect": "Mend the lighthouse",
+		"cost": {"energy_today": 1, "gold": 3, "wood": 2}, "gain": {"hull": 12},
+		"log": "Repaired the hull.",
 	},
 	"craft_mines": {
-		"name": "Craft Mines", "zone": "Crafting", "effect": "Prepare automatic night mines",
+		"name": "Craft Mines", "zone": "light", "effect": "Two mines fire on their own tonight",
 		"cost": {"energy_today": 1, "gold": 4, "scrap": 3}, "gain": {"mines": 2},
 		"log": "Crafted 2 mines.",
 	},
 	"build_barricade": {
-		"name": "Build Barricade", "zone": "Crafting", "effect": "Reduce next crash damage",
+		"name": "Build Barricade", "zone": "light", "effect": "Eats most of the next crash",
 		"cost": {"energy_today": 1, "wood": 4}, "gain": {"barricades": 1},
 		"log": "Built a barricade.",
 	},
+	"make_tool": {
+		"name": "Machine a Part", "zone": "light", "effect": "Fabricate one precision part",
+		"cost": {"energy_today": 1, "scrap": 5}, "gain": {"tools": 1},
+		"log": "Machined a part.",
+		"note": "Needed for the Lens Crank, Rifle Breech,\nand Rusty Autoturret projects.",
+	},
 	"gather_driftwood": {
-		"name": "Gather Driftwood", "zone": "Supplies", "effect": "Comb the shore for timber",
+		"name": "Gather Driftwood", "zone": "provisions", "effect": "Comb the shore for timber",
 		"cost": {"energy_today": 1}, "gain": {"wood": 4},
 		"log": "Gathered +4 timber.",
 	},
-	"fish": {
-		"name": "Fish", "zone": "Supplies", "effect": "Rations and a few shillings",
-		"cost": {"energy_today": 1}, "gain": {"food": 2, "gold": 2},
-		"log": "Caught rations and sold the extra fish.",
-	},
 	"dive_wreckage": {
-		"name": "Dive Wreckage", "zone": "Supplies", "effect": "Salvage below the dock",
+		"name": "Dive Wreckage", "zone": "provisions", "effect": "Salvage below the dock",
 		"cost": {"energy_today": 2}, "gain": {"wood": 2, "scrap": 3},
 		"log": "Recovered timber and iron.",
 		"daily_cap": "dive_wreckage", "note": "Once per day.",
 	},
-	"plant_potatoes": {
-		"name": "Plant Potatoes", "zone": "Supplies", "effect": "Matures after 3 days",
-		"cost": {"energy_today": 1, "food": 1}, "gain": {"crop": 1},
-		"log": "Potatoes planted.",
+	"fish": {
+		"name": "Fish", "zone": "provisions", "effect": "Rations and a few shillings",
+		"cost": {"energy_today": 1}, "gain": {"food": 2, "gold": 2},
+		"log": "Caught rations and sold the extra fish.",
 	},
-	"harvest_potatoes": {
-		"name": "Harvest Potatoes", "zone": "Supplies", "effect": "Free harvest from mature plots",
-		"cost": {}, "gain": {"food": 5},
-		"log": "Harvested potatoes.",
-	},
-	"rest": {
-		"name": "Rest", "zone": "Rest", "effect": "Save strength for tomorrow",
-		"cost": {"energy_today": 1}, "gain": {"tomorrow_daylight": 1},
-		"log": "Tomorrow Daylight +1.",
-		"daily_cap": "rest", "note": "Once per day.",
-	},
-	"cook_meal": {
-		"name": "Cook Meal", "zone": "Rest", "effect": "Better tomorrow tempo",
+	"hearty_supper": {
+		"name": "Hearty Supper", "zone": "provisions", "effect": "Work longer tomorrow",
 		"cost": {"energy_today": 1, "food": 2}, "gain": {"tomorrow_daylight": 2},
-		"log": "Tomorrow Daylight +2.",
-		"daily_cap": "cook_meal", "note": "Once per day.",
-	},
-	"scout_raid": {
-		"name": "Scout Raid", "zone": "Rest", "effect": "Preview tonight's threat",
-		"cost": {"energy_today": 1, "gold": 5}, "gain": {"forecast": 1},
-		"log": "Raid scouted.",
-		"daily_cap": "scout_raid",
+		"log": "A proper meal. Tomorrow: +2 Daylight.",
+		"daily_cap": "hearty_supper", "note": "Once per day.",
 	},
 }
 
@@ -306,32 +227,32 @@ const ACTIONS := {
 ## Same card machinery as ACTIONS; "zone" is where it shows up.
 const OPPORTUNITIES := {
 	"passing_merchant": {
-		"name": "Passing Merchant", "zone": "Supplies", "effect": "Sell timber at a good rate",
+		"name": "Passing Merchant", "zone": "provisions", "effect": "Sell timber at a good rate",
 		"cost": {"energy_today": 1, "wood": 4}, "gain": {"gold": 7},
 		"log": "Sold timber to the merchant sloop.",
 	},
 	"seal_colony": {
-		"name": "Seal Colony", "zone": "Supplies", "effect": "Easy hunting on the north rocks",
+		"name": "Seal Colony", "zone": "provisions", "effect": "Easy hunting on the north rocks",
 		"cost": {"energy_today": 1}, "gain": {"food": 4},
 		"log": "Came back heavy with meat.",
 	},
 	"calm_tide": {
-		"name": "Calm Tide", "zone": "Supplies", "effect": "The shallows give up their secrets",
+		"name": "Calm Tide", "zone": "provisions", "effect": "The shallows give up their secrets",
 		"cost": {"energy_today": 2}, "gain": {"wood": 3, "scrap": 3},
 		"log": "Calm water made for easy salvage.",
 	},
 	"iron_barge": {
-		"name": "Iron Barge Wreck", "zone": "Crafting", "effect": "A barge broke up on the reef",
+		"name": "Iron Barge Wreck", "zone": "light", "effect": "A barge broke up on the reef",
 		"cost": {"energy_today": 2}, "gain": {"scrap": 5},
 		"log": "Stripped the barge to its ribs.",
 	},
 	"quiet_morning": {
-		"name": "Quiet Morning", "zone": "Rest", "effect": "The sea is kind, for once",
+		"name": "Quiet Morning", "zone": "provisions", "effect": "The sea is kind, for once",
 		"cost": {"energy_today": 1}, "gain": {"tomorrow_daylight": 1},
 		"log": "A rare unhurried morning.",
 	},
 	"travelling_smith": {
-		"name": "Travelling Smith", "zone": "Crafting", "effect": "A smith offers cut-rate work",
+		"name": "Travelling Smith", "zone": "light", "effect": "A smith offers cut-rate work",
 		"cost": {"energy_today": 1, "gold": 6}, "gain": {"tools": 1},
 		"log": "The smith machined a part for cheap.",
 	},
@@ -360,17 +281,10 @@ func action_def(action_id: String) -> Dictionary:
 
 func action_gain(action_id: String) -> Dictionary:
 	var gain: Dictionary = action_def(action_id)["gain"].duplicate()
-	match action_id:
-		"patch_hull":
-			if completed_projects.has("patch_frame"):
-				gain["hull"] += 2
-		"harvest_potatoes":
-			if completed_projects.has("garden_bed_prep"):
-				gain["food"] += 1
-		"dive_wreckage":
-			var bonus := salvage_dive_bonus()
-			gain["wood"] += int(bonus["wood"])
-			gain["scrap"] += int(bonus["scrap"])
+	if action_id == "dive_wreckage":
+		var bonus := salvage_dive_bonus()
+		gain["wood"] += int(bonus["wood"])
+		gain["scrap"] += int(bonus["scrap"])
 	return gain
 
 ## Last night's chaos seeds today's recovery: crashed boats wash up timber,
@@ -395,48 +309,25 @@ func perform_action(action_id: String) -> String:
 		return "Unknown action."
 	if not cap.is_empty() and daily_caps.get(cap, false):
 		return "%s is done for today." % action["name"]
-	match action_id:  # preconditions a cost dict can't express
-		"plant_potatoes":
-			if _open_farm_plots() <= 0:
-				return "No open farm plot."
-		"harvest_potatoes":
-			if _mature_crop_index() < 0:
-				return "No mature potatoes."
 	var cost: Dictionary = action["cost"]
 	if not spend(cost):
 		return "Missing %s." % missing_text(cost)
 	if not cap.is_empty():
 		daily_caps[cap] = true
-	if action_id == "harvest_potatoes":
-		active_crops.remove_at(_mature_crop_index())
 	var gain := action_gain(action_id)
 	for key in gain.keys():
 		_apply_gain(key, int(gain[key]))
 	changed.emit()
-	if action_id == "scout_raid":
-		return "Raid scouted: about %d boats." % int(scouted_profile.get("wave_size", 0))
 	return action["log"]
 
 func _apply_gain(key: String, amount: int) -> void:
 	match key:
 		"hull":
 			hull = mini(max_hull, hull + amount)
-		"handling":
-			clean_lens_active = true
-		"crop":
-			active_crops.append({"crop": "potatoes", "days_left": 3})
 		"tomorrow_daylight":
 			tomorrow_energy_bonus = mini(tomorrow_energy_bonus + amount, 2)
-		"forecast":
-			scouted_profile = raid_profile()
 		_:
 			set(key, int(get(key)) + amount)
-
-func _mature_crop_index() -> int:
-	for i in active_crops.size():
-		if int(active_crops[i].get("days_left", 0)) <= 0:
-			return i
-	return -1
 
 func start_project(project_id: String) -> String:
 	if completed_projects.has(project_id):
@@ -471,42 +362,26 @@ func work_project(project_id: String) -> String:
 func project_def(project_id: String) -> Dictionary:
 	return START_PROJECTS.get(project_id, {})
 
-func projects_for_zone(zone: String) -> Array[String]:
-	var ids: Array[String] = []
-	for id in START_PROJECTS.keys():
-		if START_PROJECTS[id]["zone"] == zone:
-			ids.append(id)
-	return ids
-
 func _apply_project(project_id: String) -> void:
 	upgrades[project_id] = true
 	match project_id:
 		"reinforced_hull_1":
 			max_hull += 15
 			hull = mini(max_hull, hull + 15)
-		"build_plot_2":
-			farm_plots += 1
 		"rusty_autoturret":
 			turret_unlocked = true
 	changed.emit()
 
-func _advance_crops() -> void:
-	for crop in active_crops:
-		crop["days_left"] = maxi(int(crop.get("days_left", 0)) - 1, 0)
-
-func _open_farm_plots() -> int:
-	return farm_plots - active_crops.size()
-
 const SAVE_PATH := "user://save.cfg"
-const SAVE_VERSION := 1
+const SAVE_VERSION := 2  # v1 saves (farming/scout era) are discarded
 ## Everything a run needs to resume at dawn. today_opportunity/weather are
 ## derived from (run_seed, day) on load, so they aren't stored.
 const SAVE_FIELDS: Array[String] = [
 	"run_seed", "mercy", "day", "hull", "max_hull", "energy_max",
 	"energy_today", "tomorrow_energy_bonus", "gold", "wood", "scrap", "food",
-	"tools", "mines", "barricades", "farm_plots", "active_crops",
+	"tools", "mines", "barricades",
 	"active_projects", "completed_projects", "upgrades", "turret_unlocked",
-	"clean_lens_active", "last_night_stats", "daily_caps", "scouted_profile",
+	"last_night_stats", "daily_caps",
 	"run_kills", "run_gold_earned", "run_perfects",
 ]
 
@@ -530,10 +405,7 @@ func load_run() -> bool:
 	if cfg.load(SAVE_PATH) != OK or int(cfg.get_value("save", "version", 0)) != SAVE_VERSION:
 		return false
 	for field in SAVE_FIELDS:
-		if field == "active_crops":
-			active_crops.assign(cfg.get_value("save", field, []))  # typed-array copy
-		else:
-			set(field, cfg.get_value("save", field, get(field)))
+		set(field, cfg.get_value("save", field, get(field)))
 	_roll_day_flavor()
 	changed.emit()
 	return true
@@ -628,22 +500,38 @@ func raid_profile() -> Dictionary:
 	}
 
 func beam_turn_multiplier() -> float:
-	var value := 1.0
-	if completed_projects.has("greased_crank"):
-		value += 0.05
-	if completed_projects.has("lens_crank_1"):
-		value += 0.12
-	if clean_lens_active:
-		value += 0.05
-	return value
+	return 1.25 if completed_projects.has("lens_crank_1") else 1.0
 
 func reload_multiplier() -> float:
-	var value := 1.0
-	if completed_projects.has("breech_cleaning_kit"):
-		value -= 0.05
-	if completed_projects.has("rifle_breech_1"):
-		value -= 0.10
-	return maxf(value, 0.65)
+	return 0.8 if completed_projects.has("rifle_breech_1") else 1.0
 
-func perfect_zone_bonus() -> float:
-	return 0.02 if clean_lens_active else 0.0
+## Tonight's exact boat list, rolled from the night RNG. The forecast shows
+## this and the spawner consumes it, so the forecast is true by construction.
+func night_plan() -> Array[String]:
+	var profile := raid_profile()
+	var rng := night_rng()
+	var plan: Array[String] = []
+	for i in int(profile["wave_size"]):
+		var roll := rng.randf()
+		if roll < float(profile["heavy_weight"]):
+			plan.append("heavy")
+		elif roll < float(profile["heavy_weight"]) + float(profile["fast_weight"]):
+			plan.append("fast")
+		else:
+			plan.append("basic")
+	return plan
+
+## "5 boats: 4 skiffs, 1 heavy hull" — the day is an answer to this line.
+func forecast_text() -> String:
+	var plan := night_plan()
+	var counts := {"basic": 0, "fast": 0, "heavy": 0}
+	for kind in plan:
+		counts[kind] += 1
+	var parts: Array[String] = []
+	if counts["basic"] > 0:
+		parts.append("%d skiff%s" % [counts["basic"], "s" if counts["basic"] > 1 else ""])
+	if counts["fast"] > 0:
+		parts.append("%d swift" % counts["fast"])
+	if counts["heavy"] > 0:
+		parts.append("%d heavy hull%s" % [counts["heavy"], "s" if counts["heavy"] > 1 else ""])
+	return "%d boats: %s" % [plan.size(), ", ".join(parts)]

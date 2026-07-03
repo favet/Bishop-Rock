@@ -1,8 +1,8 @@
 extends Node
-## Headless day-UI check. Boots Main, opens the day hub directly, and
+## Headless day-UI check. Boots Main, opens the one-screen day hub, and
 ## asserts the UI-clarity contract: core-only top bar, tokenized Daylight
-## with hover ghost preview, honest hull bar, and a Start Night button that
-## stays put across zone switches. Run with:
+## with hover ghost preview, honest hull bar, all cards visible at once, a
+## truthful Tonight forecast, and a fixed Start Night button. Run with:
 ##   godot --headless --path . res://tests/DayUiCheck.tscn
 
 const MAIN := preload("res://scenes/main/Main.tscn")
@@ -49,31 +49,41 @@ func _ready() -> void:
 	assert(absf(main._hull_fill.size.x - expected) < 0.5, "hull fill must use max_hull")
 	assert(main._hull_label.text == "HULL 79/85")
 
-	# Start Night stays in the same place whatever zone is selected.
+	# One screen: both action groups and all projects visible at once.
+	assert(main._light_list.get_child_count() >= 4, "Keep the Light column missing cards")
+	assert(main._prov_list.get_child_count() >= 4, "Provisions column missing cards")
+	assert(main._project_list.get_child_count() == CampaignState.START_PROJECTS.size())
+
+	# The Tonight forecast tells the truth: it counts the same plan the
+	# spawner will consume.
+	var plan := CampaignState.night_plan()
+	assert(main._tonight_holder.get_child_count() > 0, "Tonight panel missing")
+	assert(CampaignState.forecast_text().begins_with("%d boats" % plan.size()))
+
+	# Start Night exists, is fixed in the footer, and survives card rebuilds.
 	var start := main._start_night_label.get_parent() as Button
 	assert(start.name == "FixedStartNightButton")
 	assert(main._start_night_label.text.begins_with("START NIGHT"))
 	var fixed_pos := start.global_position
-	for zone in ["Repairs", "Crafting", "Supplies", "Rest"]:
-		main._select_zone(zone)
-		await get_tree().process_frame
-		assert(start.global_position == fixed_pos, "Start Night moved on zone switch")
-		# Action cards must be tall enough for their manually laid-out content.
-		for card in main._action_list.get_children():
+	main._rebuild_day_cards()
+	await get_tree().process_frame
+	assert(start.global_position == fixed_pos, "Start Night moved on rebuild")
+
+	# Action cards must be tall enough for their manually laid-out content.
+	for list in [main._light_list, main._prov_list]:
+		for card in list.get_children():
 			if card is Button:
 				for content in card.get_children():
 					if content is VBoxContainer:
 						var needed: float = content.get_combined_minimum_size().y + content.position.y
-						if card.custom_minimum_size.y < needed:
-							print("OVERFLOW %s: min=%.1f needed=%.1f size=%.1f" % [zone, card.custom_minimum_size.y, needed, card.size.y])
-						assert(card.custom_minimum_size.y >= needed, "card content overflows in %s" % zone)
+						assert(card.custom_minimum_size.y >= needed, "card content overflows")
 
 	# Unaffordable projects stay inspectable: card exists, button not disabled.
 	CampaignState.gold = 0
-	main._select_zone("Crafting")
+	main._rebuild_day_cards()
 	await get_tree().process_frame
 	var found_cannot_start := false
-	for card in main._action_list.get_children():
+	for card in main._project_list.get_children():
 		for button in card.find_children("*", "Button", true, false):
 			if button.text == "Cannot Start":
 				found_cannot_start = true
@@ -83,14 +93,11 @@ func _ready() -> void:
 	# Save/load round-trip through the autoload (bare instances don't persist).
 	CampaignState.gold = 17
 	CampaignState.day = 4
-	CampaignState.active_crops.assign([{"crop": "potatoes", "days_left": 2}])
 	CampaignState.save_run()
 	CampaignState.gold = 1
 	CampaignState.day = 9
-	CampaignState.active_crops.clear()
 	assert(CampaignState.load_run(), "saved run must load")
 	assert(CampaignState.gold == 17 and CampaignState.day == 4, "load must restore fields")
-	assert(CampaignState.active_crops.size() == 1, "load must restore crops")
 	CampaignState.delete_save()
 	assert(not CampaignState.has_save(), "delete_save must remove the file")
 
@@ -98,7 +105,7 @@ func _ready() -> void:
 	if DisplayServer.get_name() != "headless":
 		CampaignState.gold = 21
 		main._refresh_day_ui()
-		main._select_zone("Repairs")
+		main._rebuild_day_cards()
 		await get_tree().create_timer(0.4).timeout
 		get_viewport().get_texture().get_image().save_png("user://day_ui_check.png")
 
