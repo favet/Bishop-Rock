@@ -218,40 +218,92 @@ const ACTIONS := {
 	},
 }
 
-## One rotating bonus action per day, drawn from this pool by the run seed.
-## Same card machinery as ACTIONS; "zone" is where it shows up.
+## One rotating event per day, drawn from this pool by the run seed. Same
+## card machinery as ACTIONS, rendered in the TODAY column as news, not
+## stock. "passive" events change the day's rules instead of costing
+## Daylight (calm_tide widens the fishing band).
 const OPPORTUNITIES := {
 	"passing_merchant": {
-		"name": "Passing Merchant", "zone": "provisions", "effect": "Sell timber at a good rate",
+		"name": "Passing Merchant", "effect": "Sell timber at a good rate",
 		"cost": {"energy_today": 1, "wood": 4}, "gain": {"gold": 7},
 		"log": "Sold timber to the merchant sloop.",
 	},
+	"merchant_skiff": {
+		"name": "Merchant Skiff", "effect": "Buy iron off a passing skiff",
+		"cost": {"energy_today": 1, "gold": 12}, "gain": {"scrap": 4},
+		"log": "Bought iron off the skiff.",
+	},
 	"seal_colony": {
-		"name": "Seal Colony", "zone": "provisions", "effect": "Easy hunting on the north rocks",
+		"name": "Seal Colony", "effect": "Easy hunting on the north rocks",
 		"cost": {"energy_today": 1}, "gain": {"food": 4},
 		"log": "Came back heavy with meat.",
 	},
-	"calm_tide": {
-		"name": "Calm Tide", "zone": "provisions", "effect": "The shallows give up their secrets",
-		"cost": {"energy_today": 2}, "gain": {"wood": 3, "scrap": 3},
-		"log": "Calm water made for easy salvage.",
+	"washed_up_timber": {
+		"name": "Washed-Up Timber", "effect": "The tide left a gift",
+		"cost": {"energy_today": 1}, "gain": {"wood": 7},
+		"log": "Hauled the tide's timber up the rocks.",
+	},
+	"floating_crate": {
+		"name": "Floating Crate", "effect": "Something bobs beyond the dock",
+		"cost": {"energy_today": 1}, "gain": {"wood": 3, "scrap": 2},
+		"log": "Fished the crate out. Mixed cargo.",
 	},
 	"iron_barge": {
-		"name": "Iron Barge Wreck", "zone": "light", "effect": "A barge broke up on the reef",
+		"name": "Iron Barge Wreck", "effect": "A barge broke up on the reef",
 		"cost": {"energy_today": 2}, "gain": {"scrap": 5},
 		"log": "Stripped the barge to its ribs.",
 	},
+	"calm_tide": {
+		"name": "Calm Tide", "effect": "The sea is gentle - fishing is easier today",
+		"passive": true,
+	},
 	"quiet_morning": {
-		"name": "Quiet Morning", "zone": "provisions", "effect": "The sea is kind, for once",
+		"name": "Quiet Morning", "effect": "The sea is kind, for once",
 		"cost": {"energy_today": 1}, "gain": {"tomorrow_daylight": 1},
 		"log": "A rare unhurried morning.",
 	},
 	"travelling_smith": {
-		"name": "Travelling Smith", "zone": "light", "effect": "Buy off-cut iron cheap",
+		"name": "Travelling Smith", "effect": "Buy off-cut iron cheap",
 		"cost": {"energy_today": 1, "gold": 6}, "gain": {"scrap": 5},
 		"log": "Bought the smith's off-cuts.",
 	},
 }
+
+const FISH_REWARDS := {
+	"poor": {"food": 1},
+	"normal": {"food": 2, "gold": 1},
+	"good": {"food": 3, "gold": 3},
+	"perfect": {"food": 3, "gold": 5, "scrap": 1},
+}
+
+## Minigame result -> rewards. The button-press Fish action remains the
+## baseline; skill beats it, botching undershoots it. Spot shapes the take:
+## reef adds iron on good casts, deep water pays shillings but punishes a
+## botched line with nothing.
+func fish_catch(spot: String, quality: String) -> String:
+	if not spend({"energy_today": 1}):
+		return "Need 1 Daylight."
+	var reward: Dictionary = FISH_REWARDS[quality].duplicate()
+	match spot:
+		"reef":
+			if quality == "good" or quality == "perfect":
+				reward["scrap"] = int(reward.get("scrap", 0)) + 1
+		"deep":
+			if quality == "poor":
+				reward = {}
+			elif reward.has("gold"):
+				reward["gold"] = int(reward["gold"]) + 2
+	for key in reward.keys():
+		_apply_gain(key, int(reward[key]))
+	changed.emit()
+	match quality:
+		"perfect":
+			return "A perfect catch - the crate came up with it!" if reward.has("scrap") else "A perfect catch!"
+		"good":
+			return "A good haul."
+		"normal":
+			return "A fair catch."
+	return "Barely a bite." if not reward.is_empty() else "The deep gave nothing back."
 
 ## Weather rolled per day: one enum, two knobs on the night. desc states the
 ## actual effect — an unexplained label is flavor noise, not information.
@@ -300,6 +352,8 @@ func perform_action(action_id: String) -> String:
 		if action_id != today_opportunity:
 			return "Unknown action."
 		action = OPPORTUNITIES[action_id]
+		if action.get("passive", false):
+			return "The tide does its own work."
 		cap = "opportunity"  # each opportunity is once, today only
 	if action.is_empty():
 		return "Unknown action."

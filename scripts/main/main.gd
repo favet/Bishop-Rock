@@ -346,11 +346,20 @@ func _rebuild_day_cards() -> void:
 	var opp_id: String = CampaignState.today_opportunity
 	if not opp_id.is_empty() and not CampaignState.daily_caps.get("opportunity", false):
 		var opp: Dictionary = CampaignState.OPPORTUNITIES[opp_id]
-		_today_event_holder.add_child(_action_card({
-			"id": opp_id, "name": opp["name"], "effect": opp["effect"],
-			"cost": opp["cost"], "gain": CampaignState.action_gain(opp_id),
-			"note": "Today only.", "opportunity": true,
-		}))
+		if opp.get("passive", false):
+			# Rule-changing event: information, not a purchase.
+			var info := PanelContainer.new()
+			info.add_theme_stylebox_override("panel", _panel_style(Color(0.10, 0.09, 0.06), BRASS, 2))
+			var box := VBoxContainer.new()
+			info.add_child(box)
+			_card_title(box, opp["name"], opp["effect"])
+			_today_event_holder.add_child(info)
+		else:
+			_today_event_holder.add_child(_action_card({
+				"id": opp_id, "name": opp["name"], "effect": opp["effect"],
+				"cost": opp["cost"], "gain": CampaignState.action_gain(opp_id),
+				"note": "Today only.", "opportunity": true,
+			}))
 	for action in _actions_for_group("light"):
 		_light_list.add_child(_action_card(action))
 	for action in _actions_for_group("provisions"):
@@ -404,12 +413,60 @@ func _action_card(action: Dictionary) -> Button:
 	rows.ready.connect(func() -> void:
 		button.custom_minimum_size.y = rows.get_combined_minimum_size().y + 16.0)
 	button.pressed.connect(func() -> void:
+		if action["id"] == "fish":
+			_open_fishing()
+			return
 		_log_label.text = CampaignState.perform_action(action["id"])
 		_set_daylight_preview(0)
 		_refresh_day_ui()
 		_rebuild_day_cards()
 	)
 	return button
+
+const FishingGameScript := preload("res://ui/fishing_game.gd")
+
+## Fish is a short timing game, not a conversion: pick a spot, land strikes.
+func _open_fishing() -> void:
+	if CampaignState.energy_today < 1:
+		_log_label.text = "Need 1 Daylight."
+		return
+	var dim := _full_screen_dim()
+	_campaign_layer.add_child(dim)
+	var center := _center_box(Vector2(420, 240))
+	_campaign_layer.add_child(center)
+	var box := center.get_child(0) as PanelContainer
+	var list := VBoxContainer.new()
+	list.add_theme_constant_override("separation", 8)
+	box.add_child(list)
+	_card_title(list, "Where do you cast?", "Spend 1 Daylight. Skill decides the take.")
+	var spots := {
+		"shallows": "Shallows - steady water, reliable rations",
+		"reef": "Reef - tighter timing, iron on good casts",
+		"deep": "Deep water - fast and narrow, pays shillings",
+	}
+	for spot in spots:
+		var pick := Button.new()
+		pick.text = spots[spot]
+		pick.custom_minimum_size = Vector2(0, 34)
+		pick.pressed.connect(_start_fishing.bind(spot, dim, center))
+		list.add_child(pick)
+	var cancel := Button.new()
+	cancel.text = "Not today"
+	cancel.pressed.connect(func() -> void:
+		dim.queue_free()
+		center.queue_free())
+	list.add_child(cancel)
+
+func _start_fishing(spot: String, dim: Control, chooser: Control) -> void:
+	chooser.queue_free()
+	var calm: bool = CampaignState.today_opportunity == "calm_tide"
+	var game: Control = FishingGameScript.new(spot, calm)
+	_campaign_layer.add_child(game)
+	game.finished.connect(func(quality: String) -> void:
+		dim.queue_free()
+		_log_label.text = CampaignState.fish_catch(spot, quality)
+		_refresh_day_ui()
+		_rebuild_day_cards())
 
 func _project_card(project_id: String) -> VBoxContainer:
 	var project := CampaignState.project_def(project_id)
@@ -493,6 +550,10 @@ func _actions_for_group(group: String) -> Array[Dictionary]:
 			if int(bonus["wood"]) > 0 or int(bonus["scrap"]) > 0:
 				entry["note"] = "Once per day. Includes +%d timber from wrecks,\n+%d iron from crates." % [
 					int(bonus["wood"]), int(bonus["scrap"])]
+		if id == "fish":
+			entry["effect"] = "Cast a line - skill decides the take"
+			if CampaignState.today_opportunity == "calm_tide":
+				entry["note"] = "Calm tide - the strike band is wide today."
 		var badge := _action_badge(id)
 		if not badge.is_empty():
 			entry["badge"] = badge
