@@ -1,5 +1,9 @@
 # Core Critique — Day Cycle, Mechanics, UI/UX (July 2026)
 
+**Status: fully implemented July 2026** — all cut-list items shipped
+(F1-F4, U1-U10). Actions now 7, currencies 5, save v3, first heavy
+guaranteed night 5, sim margins: degenerate 13 / balanced 25.
+
 Ruthless pass over the current build. Two lists: what to cut (extraneia)
 and what to cement (the quality core). Every claim below was verified
 against the code, not vibes.
