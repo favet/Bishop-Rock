@@ -10,11 +10,20 @@ Materials are rebranded in the UI only — internal keys are unchanged: gold -> 
 
 ## State
 
+Current pass notes (July 2026): Day 1 uses 4 Daylight. The live resource
+set is Shillings, Timber, Iron, Rations, mines, and barricades; the older
+tools/parts/farm notes below are legacy context only. Starter kill rewards
+are Basic 2s, Swift 3s, Heavy 6s; perfect kill bonuses remain +2/+2/+4.
+
 `CampaignState` is an autoload backed by `scripts/campaign/run_state.gd`. It tracks day, hull, Daylight (energy), gold, wood, scrap, food, tools, mines, barricades, farm plots, crops, projects, completed upgrades, turret unlock state, clean-lens state, and the last night summary.
 
 Day 1 starts at 85/100 hull, 6 Daylight, 12 gold, 8 wood, 2 scrap, 3 food, 1 farm plot, and no turret.
 
 ## Nights
+
+Starter campaign visibility is stricter than v0: no spawn pings, no free
+contact ticks, and no ghost ships. The player sweeps the beam to find boats,
+so early boats are slower and each night has an explicit countdown timer.
 
 Campaign nights use `CampaignState.raid_profile()` instead of the original 24-boat v0 pressure.
 
@@ -42,6 +51,11 @@ When the wave is fully spawned and all boats are resolved, the dawn summary show
 
 ## Day Hub
 
+Current day hub: top core resources, left Today/Tonight, center Keep the
+Light and Provisions action groups, right Projects/Built badges, fixed
+"Light the Lantern" button at the bottom. No scrollbars at the current
+content level.
+
 The day hub is a brass-on-iron card layout built in `scripts/main/main.gd`:
 
 - Top bar: only the core resources — Hull (bar + label, fill always relative to current `max_hull`), Daylight (one brass token per point; spent tokens go dark), Gold, Wood, Scrap, Food, and the Day number. Every entry has a hover tooltip stating what the resource is for and how to gain it. Tools, mines, and barricades are deliberately NOT here.
@@ -59,7 +73,15 @@ Card conventions:
 
 Debug: the F3 world overlay is off by default; the normal night HUD shows only hull, night number, contacts, and rifle readiness.
 
+Current night HUD: the top of the screen is dominated by the timer. Boat
+shot/remaining counts are intentionally omitted from normal play.
+
 ## Projects
+
+Current starter projects: Lens Crank (20s, 6 Timber, 8 Iron, 2 work), Rifle
+Breech (25s, 10 Iron, 3 work), Reinforced Hull (25s, 18 Timber, 4 Iron, 2
+work), and Rusty Autoturret (50s, 12 Timber, 18 Iron, 6 work). The turret is
+intended as a week-two milestone.
 
 Projects pay a start cost, then consume Daylight over one or more days. Starter projects are reachable early: Greased Crank, Breech Cleaning Kit, Patch Frame, and Garden Bed Prep.
 

@@ -29,9 +29,9 @@
   deleted, not rebalanced.
 - Attribution at dawn: report says what mines fired, what barricades ate,
   perfect kills.
-- One screen: no zones, no navigation. All action cards visible at once in
-  two groups (Keep the Light / Provisions), Tonight panel on the right,
-  projects beside it, Start Night fixed.
+- One screen: no scrollbars at the current content level. All action cards
+  fit in two groups (Keep the Light / Provisions), Today/Tonight explains
+  the situation, projects sit beside them, and Start Night is fixed.
 
 ## Action diet (15 -> 8 + daily opportunity)
 
@@ -65,13 +65,14 @@ the diet. Keeper's Mercy remains the relief valve.
   poor->perfect by strikes landed) — the calm daytime mirror of the
   charge shot. Skill beats the old button; botching deep water pays nothing.
 - Night reads as watched water: faint rings, compass ticks, sea speckle,
-  contact silhouettes, V wakes, sonar pings on spawn, "-N HULL" floats at
-  the tower, running earned tally in the HUD.
+  V wakes, "-N HULL" floats at the tower, and the HUD is dominated by the
+  countdown timer. Starter runs do not show spawn pings, free contact ticks,
+  or ghost ships; those belong to future sonar/night-vision upgrades.
 - Projects carry a "why it matters" line and an "Almost ready: need 5
   Iron" state when within 6 resources of start.
-- Top bar pairs icons with words; Start Night states weather + boat count
-  and warns about unspent Daylight; dawn ends with "The lighthouse still
-  stands." and "Begin Day N".
+- Top bar pairs icons with words; the fixed button says "Light the Lantern"
+  with night/weather, and warns about unspent Daylight; dawn ends with "The
+  lighthouse still stands." and "Begin Day N".
 
 ## Deferred
 

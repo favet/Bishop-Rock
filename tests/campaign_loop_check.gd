@@ -13,17 +13,20 @@ func _init() -> void:
 	assert(state.wood == 12)
 
 	state.gold = 20
-	state.scrap = 9
+	state.scrap = 8
 	assert(state.start_project("lens_crank_1").contains("Started"))
 	state.energy_today = 4
 	state.work_project("lens_crank_1")
 	assert(state.work_project("lens_crank_1").contains("Completed"))
 	assert(state.beam_turn_multiplier() > 1.0)
 
-	state.gold = 40
-	state.scrap = 20
+	state.gold = 50
+	state.wood = 12
+	state.scrap = 18
 	assert(state.start_project("rusty_autoturret").contains("Started"))
-	state.energy_today = 4
+	state.energy_today = 6
+	state.work_project("rusty_autoturret")
+	state.work_project("rusty_autoturret")
 	state.work_project("rusty_autoturret")
 	state.work_project("rusty_autoturret")
 	state.work_project("rusty_autoturret")

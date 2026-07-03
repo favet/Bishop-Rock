@@ -53,6 +53,8 @@ func _ready() -> void:
 	assert(main._light_list.get_child_count() >= 3, "Keep the Light column missing cards")
 	assert(main._prov_list.get_child_count() >= 4, "Provisions column missing cards")
 	assert(main._project_list.get_child_count() == CampaignState.START_PROJECTS.size())
+	assert(main.find_children("*", "ScrollContainer", true, false).is_empty(),
+		"day hub must not use scrollbars at current content level")
 
 	# The Tonight forecast tells the truth: it counts the same plan the
 	# spawner will consume.
@@ -63,7 +65,7 @@ func _ready() -> void:
 	# Start Night exists, is fixed in the footer, and survives card rebuilds.
 	var start := main._start_night_label.get_parent() as Button
 	assert(start.name == "FixedStartNightButton")
-	assert(main._start_night_label.text.begins_with("START NIGHT"))
+	assert(main._start_night_label.text.begins_with("LIGHT THE LANTERN"))
 	var fixed_pos := start.global_position
 	main._rebuild_day_cards()
 	await get_tree().process_frame

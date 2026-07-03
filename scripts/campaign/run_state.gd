@@ -14,29 +14,29 @@ const START_PROJECTS := {
 		"display_name": "Lens Crank",
 		"effect": "Beam turns 25% faster",
 		"why": "Aim faster. Better against swift boats.",
-		"start_cost": {"gold": 18, "scrap": 9},
+		"start_cost": {"gold": 20, "wood": 6, "scrap": 8},
 		"work_required": 2,
 	},
 	"rifle_breech_1": {
 		"display_name": "Rifle Breech",
 		"effect": "Reload 20% faster",
 		"why": "More shots per night. More boats stopped.",
-		"start_cost": {"gold": 24, "scrap": 11},
+		"start_cost": {"gold": 25, "scrap": 10},
 		"work_required": 3,
 	},
 	"reinforced_hull_1": {
 		"display_name": "Reinforced Hull",
 		"effect": "Max hull +15 and heal +15",
 		"why": "A bigger buffer between you and the dark.",
-		"start_cost": {"gold": 24, "wood": 10, "scrap": 3},
+		"start_cost": {"gold": 25, "wood": 18, "scrap": 4},
 		"work_required": 2,
 	},
 	"rusty_autoturret": {
 		"display_name": "Rusty Autoturret",
 		"effect": "A second gun fires on its own",
 		"why": "The only gun that never sleeps.",
-		"start_cost": {"gold": 40, "scrap": 20},
-		"work_required": 4,
+		"start_cost": {"gold": 50, "wood": 12, "scrap": 18},
+		"work_required": 6,
 	},
 }
 
@@ -208,9 +208,9 @@ const ACTIONS := {
 		"daily_cap": "dive_wreckage", "note": "Once per day.",
 	},
 	"fish": {
-		"name": "Fish", "zone": "provisions", "effect": "Rations and a few shillings",
-		"cost": {"energy_today": 1}, "gain": {"food": 2, "gold": 2},
-		"log": "Caught rations and sold the extra fish.",
+		"name": "Fish", "zone": "provisions", "effect": "Cast a line - skill decides the take",
+		"cost": {"energy_today": 1}, "gain": {"food": 1},
+		"log": "Caught enough for supper.",
 	},
 	"hearty_supper": {
 		# 3 rations, not 2: one Fish can't feed it daily, so supper is a
@@ -276,8 +276,8 @@ const OPPORTUNITIES := {
 const FISH_REWARDS := {
 	"poor": {"food": 1},
 	"normal": {"food": 2, "gold": 1},
-	"good": {"food": 3, "gold": 3},
-	"perfect": {"food": 3, "gold": 5, "scrap": 1},
+	"good": {"food": 3, "gold": 2},
+	"perfect": {"food": 3, "gold": 4, "scrap": 1},
 }
 
 ## Minigame result -> rewards. The button-press Fish action remains the
@@ -509,10 +509,11 @@ func raid_profile() -> Dictionary:
 			"fast_weight": 0.0,
 			"heavy_weight": 0.0,
 			"max_simultaneous": 1,
-			"speed_scale": 0.7,
+			"speed_scale": 0.6,
 			"start_interval": 3.6,
 			"min_interval": 2.8,
 			"first_spawn_delay": 1.5,
+			"night_duration": 65.0,
 			"use_v0_hazards": false,
 		}
 	if day <= 4:
@@ -522,10 +523,11 @@ func raid_profile() -> Dictionary:
 			"fast_weight": 0.15,
 			"heavy_weight": 0.0,
 			"max_simultaneous": 1 if day == 3 else 2,
-			"speed_scale": 0.75,
+			"speed_scale": 0.65,
 			"start_interval": 3.4,
 			"min_interval": 2.4,
 			"first_spawn_delay": 1.2,
+			"night_duration": 75.0,
 			"use_v0_hazards": false,
 		}
 	if day <= 9:
@@ -535,10 +537,11 @@ func raid_profile() -> Dictionary:
 			"fast_weight": 0.2,
 			"heavy_weight": 0.08,
 			"max_simultaneous": 2,
-			"speed_scale": 0.8 + 0.02 * float(day - 5),
+			"speed_scale": 0.72 + 0.02 * float(day - 5),
 			"start_interval": 3.2,
 			"min_interval": 2.2,
 			"first_spawn_delay": 1.2,
+			"night_duration": 90.0,
 			"use_v0_hazards": false,
 		}
 	if day <= 14:
@@ -548,10 +551,11 @@ func raid_profile() -> Dictionary:
 			"fast_weight": 0.25,
 			"heavy_weight": 0.12,
 			"max_simultaneous": 2,
-			"speed_scale": 0.9,
+			"speed_scale": 0.84,
 			"start_interval": 3.0,
 			"min_interval": 1.9,
 			"first_spawn_delay": 1.0,
+			"night_duration": 100.0,
 			"use_v0_hazards": false,
 		}
 	# Day 15+: unbounded multiplicative growth. There is no final day — the
@@ -563,10 +567,11 @@ func raid_profile() -> Dictionary:
 		"fast_weight": minf(0.25 + 0.012 * over, 0.5),
 		"heavy_weight": minf(0.12 + 0.010 * over, 0.4),
 		"max_simultaneous": 3 + over / 6,
-		"speed_scale": pow(1.02, over),
+		"speed_scale": 0.9 * pow(1.02, over),
 		"start_interval": maxf(2.6 * pow(0.985, over), 1.2),
 		"min_interval": maxf(1.5 * pow(0.985, over), 0.7),
 		"first_spawn_delay": 1.0,
+		"night_duration": minf(110.0 + float(over), 150.0),
 		"use_v0_hazards": false,
 	}
 

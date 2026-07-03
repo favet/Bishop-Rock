@@ -266,14 +266,11 @@ func _show_day_hub() -> void:
 	workshop.add_theme_font_size_override("font_size", 18)
 	workshop.add_theme_color_override("font_color", BRASS)
 	right.add_child(workshop)
-	var project_scroll := ScrollContainer.new()
-	project_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	project_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	right.add_child(project_scroll)
 	_project_list = VBoxContainer.new()
 	_project_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_project_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_project_list.add_theme_constant_override("separation", 8)
-	project_scroll.add_child(_project_list)
+	right.add_child(_project_list)
 
 	var footer := HBoxContainer.new()
 	footer.add_theme_constant_override("separation", 14)
@@ -325,16 +322,12 @@ func _card_column(parent: HBoxContainer, title: String) -> VBoxContainer:
 	header.add_theme_font_size_override("font_size", 18)
 	header.add_theme_color_override("font_color", BRASS)
 	column.add_child(header)
-	# Scroll keeps tall card stacks from swallowing the footer — Start Night
-	# must always be on screen.
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	column.add_child(scroll)
+	# Current content fits in one board-like page.
 	var list := VBoxContainer.new()
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	list.add_theme_constant_override("separation", 8)
-	scroll.add_child(list)
+	column.add_child(list)
 	return list
 
 func _rebuild_day_cards() -> void:
@@ -373,7 +366,29 @@ func _rebuild_day_cards() -> void:
 		else:
 			_project_list.add_child(_project_card(project_id))
 	if not built.is_empty():
-		_small_label(_project_list, "Built: %s" % ", ".join(built), GREEN)
+		_project_list.add_child(_built_badges(built))
+
+func _built_badges(names: Array[String]) -> VBoxContainer:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 5)
+	var title := Label.new()
+	title.text = "BUILT"
+	title.add_theme_font_size_override("font_size", 12)
+	title.add_theme_color_override("font_color", BRASS)
+	box.add_child(title)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	box.add_child(row)
+	for item in names:
+		var badge := PanelContainer.new()
+		badge.add_theme_stylebox_override("panel", _panel_style(Color(0.09, 0.10, 0.08), BRASS, 1))
+		row.add_child(badge)
+		var label := Label.new()
+		label.text = item
+		label.add_theme_font_size_override("font_size", 13)
+		label.add_theme_color_override("font_color", GREEN)
+		badge.add_child(label)
+	return box
 
 func _action_card(action: Dictionary) -> Button:
 	var button := _base_card_button()
@@ -500,6 +515,15 @@ func _project_card(project_id: String) -> VBoxContainer:
 	work_label.add_theme_color_override("font_color",
 		GREEN if work_done >= int(project["work_required"]) else MUTED)
 	work_row.add_child(work_label)
+	var progress_bg := ColorRect.new()
+	progress_bg.custom_minimum_size = Vector2(255, 7)
+	progress_bg.color = Color(0.14, 0.15, 0.14)
+	inner.add_child(progress_bg)
+	var progress_fill := ColorRect.new()
+	var progress := clampf(float(work_done) / float(project["work_required"]), 0.0, 1.0)
+	progress_fill.size = Vector2(255.0 * progress, 7)
+	progress_fill.color = BRASS
+	progress_bg.add_child(progress_fill)
 	if not CampaignState.can_afford(cost) and not CampaignState.active_projects.has(project_id) and not CampaignState.completed_projects.has(project_id):
 		# Close = motivation ("almost ready"); far = red shopping list.
 		var shortfalls: Array[String] = []
@@ -601,9 +625,8 @@ func _refresh_day_ui() -> void:
 		_top_bar.add_child(_resource_badge(key, str(CampaignState.get(key))))
 	_top_bar.add_child(_resource_badge("day", str(CampaignState.day)))
 	if _start_night_label != null:
-		_start_night_label.text = "START NIGHT %d\n%s - %d boats" % [
-			CampaignState.day, RunState.WEATHERS[CampaignState.weather]["label"],
-			CampaignState.night_plan().size()]
+		_start_night_label.text = "LIGHT THE LANTERN\nNight %d - %s" % [
+			CampaignState.day, RunState.WEATHERS[CampaignState.weather]["label"]]
 	if _start_warning != null:
 		_start_warning.text = "%d Daylight unused" % CampaignState.energy_today \
 			if CampaignState.energy_today > 0 else ""
@@ -686,10 +709,12 @@ func _hull_resource() -> PanelContainer:
 	rows.add_child(_hull_label)
 	var bg := ColorRect.new()
 	bg.custom_minimum_size = Vector2(140, 8)
+	bg.clip_contents = true
 	bg.color = Color(0.16, 0.17, 0.17)
 	rows.add_child(bg)
 	_hull_fill = ColorRect.new()
 	_hull_fill.size = Vector2(140.0 * clampf(float(CampaignState.hull) / float(CampaignState.max_hull), 0.0, 1.0), 8)
+	_hull_fill.custom_minimum_size = Vector2(_hull_fill.size.x, 8)
 	_hull_fill.color = GREEN if CampaignState.hull > CampaignState.max_hull * 0.35 else RED
 	bg.add_child(_hull_fill)
 	return wrap
