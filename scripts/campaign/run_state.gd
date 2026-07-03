@@ -216,8 +216,10 @@ const ACTIONS := {
 		"log": "Caught rations and sold the extra fish.",
 	},
 	"hearty_supper": {
+		# 3 rations, not 2: one Fish can't feed it daily, so supper is a
+		# choice you build toward instead of an always-correct closer.
 		"name": "Hearty Supper", "zone": "provisions", "effect": "Work longer tomorrow",
-		"cost": {"energy_today": 1, "food": 2}, "gain": {"tomorrow_daylight": 2},
+		"cost": {"energy_today": 1, "food": 3}, "gain": {"tomorrow_daylight": 2},
 		"log": "A proper meal. Tomorrow: +2 Daylight.",
 		"daily_cap": "hearty_supper", "note": "Once per day.",
 	},

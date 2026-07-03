@@ -15,7 +15,7 @@ func _init() -> void:
 	state.scrap = 5
 	assert(state.perform_action("make_tool").contains("part"))
 	assert(state.tools == 1)
-	state.food = 4
+	state.food = 3
 	assert(state.perform_action("hearty_supper").contains("Tomorrow"))
 	assert(state.perform_action("hearty_supper").contains("done for today"))
 	state.start_day()

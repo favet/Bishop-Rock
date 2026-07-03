@@ -77,6 +77,14 @@ func _on_boat_spawned(boat: Boat) -> void:
 
 func _on_boat_died(boat: Boat) -> void:
 	kills += 1
+	# Mine kills pay no bounty — nothing salvageable after the blast. Rifle
+	# is income, mines are safety, barricades are cheap safety: three
+	# identities instead of one dominant option.
+	if boat.get_meta("mined", false):
+		if campaign_mode:
+			CampaignState.run_kills += 1
+		_float_text(boat.global_position, "MINED", Color(1.0, 0.45, 0.2))
+		return
 	var reward := _base_reward(boat)
 	var label := "+%ds" % reward
 	var is_perfect := boat.killed_by_perfect
@@ -147,7 +155,12 @@ func _auto_use_mines() -> void:
 			defenses_consumed["mines"] = int(defenses_consumed["mines"]) + 1
 			_float_text(boat.global_position, "MINE -6", Color(1.0, 0.45, 0.2))
 			Sfx.play("mine_thump")
+			# Flag only for the duration of the blast: a heavy that survives
+			# the mine still pays full bounty to the rifle later.
+			boat.set_meta("mined", true)
 			boat.take_damage(6.0)
+			if is_instance_valid(boat):
+				boat.set_meta("mined", false)
 			return
 
 func _check_for_dawn() -> void:
