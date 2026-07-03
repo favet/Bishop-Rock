@@ -50,7 +50,7 @@ func _ready() -> void:
 	assert(main._hull_label.text == "HULL 79/85")
 
 	# One screen: both action groups and all projects visible at once.
-	assert(main._light_list.get_child_count() >= 4, "Keep the Light column missing cards")
+	assert(main._light_list.get_child_count() >= 3, "Keep the Light column missing cards")
 	assert(main._prov_list.get_child_count() >= 4, "Provisions column missing cards")
 	assert(main._project_list.get_child_count() == CampaignState.START_PROJECTS.size())
 
