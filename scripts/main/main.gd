@@ -35,8 +35,10 @@ var _light_list: VBoxContainer
 var _prov_list: VBoxContainer
 var _project_list: VBoxContainer
 var _tonight_holder: VBoxContainer
+var _today_event_holder: VBoxContainer
 var _log_label: Label
 var _start_night_label: Label
+var _start_warning: Label
 
 @onready var _camera: Camera2D = $Camera2D
 
@@ -163,7 +165,7 @@ func _show_dawn(stats: Dictionary) -> void:
 	var list := VBoxContainer.new()
 	list.add_theme_constant_override("separation", 8)
 	box.add_child(list)
-	_card_title(list, "Dawn after Night %d" % int(stats["night"]), "The sea quiets. The damage remains.")
+	_card_title(list, "DAWN - NIGHT %d SURVIVED" % int(stats["night"]), "The sea quiets. The damage remains.")
 	# Three lines, not a stat wall: the fight, the purse, the damage.
 	var consumed: Dictionary = stats["defenses_consumed"]
 	for line in [
@@ -191,8 +193,12 @@ func _show_dawn(stats: Dictionary) -> void:
 	}
 	if hints.has(int(stats["night"])):
 		_small_label(list, hints[int(stats["night"])], MUTED)
+	var stands := Label.new()
+	stands.text = "The lighthouse still stands."
+	stands.add_theme_color_override("font_color", BRASS)
+	list.add_child(stands)
 	var button := Button.new()
-	button.text = "Continue to Day %d" % (CampaignState.day + 1)
+	button.text = "Begin Day %d" % (CampaignState.day + 1)
 	button.custom_minimum_size = Vector2(0, 38)
 	button.pressed.connect(func() -> void:
 		_clear_campaign_layer()
@@ -231,6 +237,23 @@ func _show_day_hub() -> void:
 	body.add_theme_constant_override("separation", 14)
 	layout.add_child(body)
 
+	# LEFT — TODAY: the situation (last night's consequence, today's event,
+	# tonight's threat). The question the other columns answer.
+	var today := VBoxContainer.new()
+	today.custom_minimum_size = Vector2(285, 0)
+	today.add_theme_constant_override("separation", 10)
+	body.add_child(today)
+	var today_header := Label.new()
+	today_header.text = "TODAY"
+	today_header.add_theme_font_size_override("font_size", 18)
+	today_header.add_theme_color_override("font_color", BRASS)
+	today.add_child(today_header)
+	today.add_child(_morning_report())
+	_today_event_holder = VBoxContainer.new()
+	today.add_child(_today_event_holder)
+	_tonight_holder = VBoxContainer.new()
+	today.add_child(_tonight_holder)
+
 	_light_list = _card_column(body, "KEEP THE LIGHT")
 	_prov_list = _card_column(body, "PROVISIONS")
 
@@ -238,8 +261,6 @@ func _show_day_hub() -> void:
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	right.add_theme_constant_override("separation", 10)
 	body.add_child(right)
-	_tonight_holder = VBoxContainer.new()
-	right.add_child(_tonight_holder)
 	var workshop := Label.new()
 	workshop.text = "WORKSHOP"
 	workshop.add_theme_font_size_override("font_size", 18)
@@ -262,6 +283,11 @@ func _show_day_hub() -> void:
 	_log_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_log_label.add_theme_color_override("font_color", MUTED)
 	footer.add_child(_log_label)
+	# Visible nudge, not a modal: unspent Daylight should be a felt choice.
+	_start_warning = Label.new()
+	_start_warning.add_theme_color_override("font_color", Color(0.95, 0.8, 0.4))
+	_start_warning.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	footer.add_child(_start_warning)
 	var start := Button.new()
 	start.name = "FixedStartNightButton"
 	start.custom_minimum_size = Vector2(330, 64)
@@ -290,7 +316,7 @@ func _show_day_hub() -> void:
 
 func _card_column(parent: HBoxContainer, title: String) -> VBoxContainer:
 	var column := VBoxContainer.new()
-	column.custom_minimum_size = Vector2(370, 0)
+	column.custom_minimum_size = Vector2(305, 0)
 	column.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_theme_constant_override("separation", 8)
 	parent.add_child(column)
@@ -312,9 +338,19 @@ func _card_column(parent: HBoxContainer, title: String) -> VBoxContainer:
 	return list
 
 func _rebuild_day_cards() -> void:
-	for list in [_light_list, _prov_list, _project_list]:
+	for list in [_light_list, _prov_list, _project_list, _today_event_holder]:
 		for child in list.get_children():
 			child.queue_free()
+	# The day's event lives in TODAY, not among repeatable actions — it is
+	# psychologically different and should feel like news, not stock.
+	var opp_id: String = CampaignState.today_opportunity
+	if not opp_id.is_empty() and not CampaignState.daily_caps.get("opportunity", false):
+		var opp: Dictionary = CampaignState.OPPORTUNITIES[opp_id]
+		_today_event_holder.add_child(_action_card({
+			"id": opp_id, "name": opp["name"], "effect": opp["effect"],
+			"cost": opp["cost"], "gain": CampaignState.action_gain(opp_id),
+			"note": "Today only.", "opportunity": true,
+		}))
 	for action in _actions_for_group("light"):
 		_light_list.add_child(_action_card(action))
 	for action in _actions_for_group("provisions"):
@@ -348,6 +384,14 @@ func _action_card(action: Dictionary) -> Button:
 	rows.add_theme_constant_override("separation", 3)
 	rows.position = Vector2(12, 8)
 	button.add_child(rows)
+	if action.has("badge"):
+		var badge_label := Label.new()
+		badge_label.text = action["badge"]["text"]
+		badge_label.add_theme_font_size_override("font_size", 12)
+		badge_label.add_theme_color_override("font_color", action["badge"]["color"])
+		rows.add_child(badge_label)
+		button.add_theme_stylebox_override("normal",
+			_panel_style(Color(0.075, 0.085, 0.085), action["badge"]["color"], 2))
 	_card_title(rows, action["name"], action["effect"], false)
 	for key in cost.keys():
 		_have_need_row(rows, key, int(CampaignState.get(key)), int(cost[key]))
@@ -449,19 +493,26 @@ func _actions_for_group(group: String) -> Array[Dictionary]:
 			if int(bonus["wood"]) > 0 or int(bonus["scrap"]) > 0:
 				entry["note"] = "Once per day. Includes +%d timber from wrecks,\n+%d iron from crates." % [
 					int(bonus["wood"]), int(bonus["scrap"])]
+		var badge := _action_badge(id)
+		if not badge.is_empty():
+			entry["badge"] = badge
 		out.append(entry)
-	# Today's rotating opportunity: pinned first with brass trim — the day's
-	# one novelty must never hide below a scroll fold.
-	var opp_id: String = CampaignState.today_opportunity
-	if not opp_id.is_empty() and not CampaignState.daily_caps.get("opportunity", false):
-		var opp: Dictionary = CampaignState.OPPORTUNITIES[opp_id]
-		if opp["zone"] == group:
-			out.insert(0, {
-				"id": opp_id, "name": opp["name"], "effect": opp["effect"],
-				"cost": opp["cost"], "gain": CampaignState.action_gain(opp_id),
-				"note": "Opportunity - today only.", "opportunity": true,
-			})
 	return out
+
+## Situation badges: the screen responds to the run. 2-3 cards get flagged
+## as obviously relevant; the rest stay quiet.
+func _action_badge(id: String) -> Dictionary:
+	match id:
+		"patch_hull":
+			if CampaignState.hull <= CampaignState.max_hull - 24:
+				return {"text": "HULL LOW", "color": RED}
+		"craft_mines":
+			if CampaignState.night_plan().has("heavy") and CampaignState.mines == 0:
+				return {"text": "FOR TONIGHT", "color": Color(0.95, 0.8, 0.4)}
+		"gather_driftwood":
+			if CampaignState.wood < 2:
+				return {"text": "TIMBER LOW", "color": Color(0.95, 0.8, 0.4)}
+	return {}
 
 func _refresh_day_ui() -> void:
 	if _top_bar == null:
@@ -475,13 +526,42 @@ func _refresh_day_ui() -> void:
 		_top_bar.add_child(_resource_badge(key, str(CampaignState.get(key))))
 	_top_bar.add_child(_resource_badge("day", str(CampaignState.day)))
 	if _start_night_label != null:
-		_start_night_label.text = "START NIGHT %d\n%s" % [
-			CampaignState.day, RunState.WEATHERS[CampaignState.weather]["label"]]
+		_start_night_label.text = "START NIGHT %d\n%s - %d boats" % [
+			CampaignState.day, RunState.WEATHERS[CampaignState.weather]["label"],
+			CampaignState.night_plan().size()]
+	if _start_warning != null:
+		_start_warning.text = "%d Daylight unused" % CampaignState.energy_today \
+			if CampaignState.energy_today > 0 else ""
 	if _tonight_holder != null:
 		for child in _tonight_holder.get_children():
 			child.queue_free()
 		_tonight_holder.add_child(_tonight_panel())
 	_update_daylight_tokens()
+
+## Morning consequence: what last night did to you, in two lines.
+func _morning_report() -> PanelContainer:
+	var wrap := PanelContainer.new()
+	wrap.add_theme_stylebox_override("panel", _panel_style(Color(0.075, 0.085, 0.085), BRASS_DARK, 1))
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 3)
+	wrap.add_child(box)
+	var stats := CampaignState.last_night_stats
+	if stats.is_empty():
+		_small_label(box, "The tower stands ready.", MUTED)
+		return wrap
+	var crashed := int(stats.get("crashed", 0))
+	var damage := int(stats.get("hull_damage_taken", 0))
+	if crashed > 0:
+		_small_label(box, "Last night: %d crash%s, hull -%d." % [
+			crashed, "es" if crashed > 1 else "", damage], RED)
+	else:
+		_small_label(box, "Last night: no boat got through.", GREEN)
+	_small_label(box, "Sunk %d, earned %d shillings." % [
+		int(stats.get("kills", 0)), int(stats.get("gold_earned", 0))], MUTED)
+	var salvage: Dictionary = CampaignState.salvage_dive_bonus()
+	if int(salvage["wood"]) > 0 or int(salvage["scrap"]) > 0:
+		_small_label(box, "Wreckage in the shallows - the dive is rich today.", BRASS)
+	return wrap
 
 ## The night's exact composition, weather, and your standing defenses — the
 ## question the day's spending is supposed to answer.
@@ -506,8 +586,13 @@ func _tonight_panel() -> PanelContainer:
 	_small_label(defenses, "Mines %d" % CampaignState.mines, TEXT, false)
 	defenses.add_child(ResourceIcon.new("barricades", 24))
 	_small_label(defenses, "Barricades %d" % CampaignState.barricades, TEXT, false)
-	if CampaignState.night_plan().has("heavy") and CampaignState.mines == 0:
-		_small_label(box, "Heavy hulls shrug off single shots - mines answer them.", RED)
+	# Strategic context, not orders: name the threat, list what answers it.
+	var plan := CampaignState.night_plan()
+	if plan.has("heavy"):
+		_small_label(box, "Threat: heavy hull%s. Useful: mines, perfect shots." % (
+			"s" if plan.count("heavy") > 1 else ""), RED if CampaignState.mines == 0 else Color(0.95, 0.8, 0.4))
+	elif plan.has("fast"):
+		_small_label(box, "Threat: swift boats. Useful: beam speed, early shots.", Color(0.95, 0.8, 0.4))
 	return wrap
 
 func _hull_resource() -> PanelContainer:
@@ -558,15 +643,16 @@ func _daylight_resource() -> PanelContainer:
 
 func _resource_badge(key: String, value: String) -> PanelContainer:
 	var wrap := _resource_shell(_display_resource_name(key).to_upper(), _resource_tooltip(key))
-	wrap.custom_minimum_size = Vector2(106, 48)
+	wrap.custom_minimum_size = Vector2(0, 48)  # width follows the label
 	var box := HBoxContainer.new()
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_theme_constant_override("separation", 6)
 	wrap.add_child(box)
 	box.add_child(ResourceIcon.new(ResourceIcon.kind_for(key), 34))
 	var label := Label.new()
-	label.text = value
-	label.add_theme_font_size_override("font_size", 18)
+	# Icon leads, word follows: pure icons are only elegant once learned.
+	label.text = "Day %s" % value if key == "day" else "%s %s" % [value, _display_resource_name(key)]
+	label.add_theme_font_size_override("font_size", 17)
 	label.add_theme_color_override("font_color", TEXT)
 	box.add_child(label)
 	return wrap
