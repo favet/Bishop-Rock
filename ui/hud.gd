@@ -84,10 +84,11 @@ func _update_enemy_status() -> void:
 	var at_sea := get_tree().get_nodes_in_group("boats").size()
 	var incoming := spawner.remaining_to_spawn()
 	var remaining_total := maxi(spawner.wave_size - _board.resolved_count(), 0)
+	var tally := "   Earned +%ds" % _board.gold_earned if _board.gold_earned > 0 else ""
 	if incoming > 0:
-		_enemy_status.text = "Contacts: %d remaining   Sunk %d" % [remaining_total, _board.kills]
+		_enemy_status.text = "Contacts: %d remaining   Sunk %d%s" % [remaining_total, _board.kills, tally]
 	else:
-		_enemy_status.text = "Contacts: %d on the water   Sunk %d" % [at_sea, _board.kills]
+		_enemy_status.text = "Contacts: %d on the water   Sunk %d%s" % [at_sea, _board.kills, tally]
 
 func _update_damage_feedback(delta: float) -> void:
 	if _damage_pulse_age >= 0.0:

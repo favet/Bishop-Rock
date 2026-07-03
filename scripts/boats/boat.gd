@@ -127,15 +127,29 @@ func _net_slow_factor() -> float:
 func _draw() -> void:
 	match vis_state:
 		VisState.CONTACT:
-			pass  # invisible on the main map; VisibilitySystem draws a sector tick
+			# Faint silhouette: the sea reads as watched, not empty. Full
+			# identification (bounty, pips) still needs the beam.
+			var ghost := _scaled_hull()
+			ghost.append(ghost[0])
+			draw_polyline(ghost, Color(0.5, 0.65, 0.8, 0.14), 1.0)
+			_draw_wake(0.06)
 		VisState.SPOTTED:
 			var outline := _scaled_hull()
 			outline.append(outline[0])
 			draw_polyline(outline, Color(0.75, 0.8, 0.85, 0.5) * hull_tint, 1.5)
+			_draw_wake(0.18)
 			_draw_health_pips()
 		VisState.ILLUMINATED:
 			draw_colored_polygon(_scaled_hull(), Color(1.0, 0.95, 0.8, 0.95) * hull_tint)
+			_draw_wake(0.28)
 			_draw_health_pips()
+
+## Short V wake trailing the stern — motion reads even in peripheral vision.
+func _draw_wake(alpha: float) -> void:
+	var stern := Vector2(-9.0 * hull_scale, 0.0)
+	for side in [-1.0, 1.0]:
+		draw_line(stern, stern + Vector2(-16.0, side * 5.5) * hull_scale,
+			Color(0.7, 0.85, 1.0, alpha), 1.0)
 
 func _scaled_hull() -> PackedVector2Array:
 	if is_equal_approx(hull_scale, 1.0):

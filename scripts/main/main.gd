@@ -41,6 +41,7 @@ var _start_night_label: Label
 @onready var _camera: Camera2D = $Camera2D
 
 func _ready() -> void:
+	DisplayServer.window_set_title("Bishop Rock")  # drop the (DEBUG) suffix
 	RenderingServer.set_default_clear_color(NIGHT_WATER)
 	Engine.time_scale = 1.0
 	_board = $NightBoard

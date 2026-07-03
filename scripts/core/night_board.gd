@@ -30,6 +30,8 @@ var defenses_consumed: Dictionary = {"mines": 0, "barricades": 0}
 
 var _dawn_emitted: bool = false
 var _floating_texts: Array[Dictionary] = []
+var _pings: Array[Dictionary] = []
+var _sea_speckle: PackedVector2Array = PackedVector2Array()
 
 func _ready() -> void:
 	add_to_group("night_board")
@@ -38,6 +40,14 @@ func _ready() -> void:
 	spawner.boat_spawned.connect(_on_boat_spawned)
 	lighthouse.destroyed.connect(_on_lighthouse_destroyed)
 	_gun.shot_hit.connect(_on_shot_hit)
+	# Static sea speckle, rolled once per night so it doesn't shimmer.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([CampaignState.run_seed, CampaignState.day, "sea"])
+	var horizon: float = OceanGrid.ring_radius(OceanGrid.Ring.HORIZON)
+	for i in 170:
+		var angle := rng.randf() * TAU
+		var radius := sqrt(rng.randf()) * horizon
+		_sea_speckle.append(Vector2.from_angle(angle) * radius)
 
 func _physics_process(delta: float) -> void:
 	if not game_over:
@@ -50,7 +60,10 @@ func _process(delta: float) -> void:
 		text["age"] = float(text["age"]) + delta
 		text["position"] = text["position"] + Vector2(0, -22) * delta
 	_floating_texts = _floating_texts.filter(func(t: Dictionary) -> bool: return float(t["age"]) < 1.0)
-	queue_redraw()  # floats + lit-boat bounties both move every frame
+	for ping in _pings:
+		ping["age"] = float(ping["age"]) + delta
+	_pings = _pings.filter(func(p: Dictionary) -> bool: return float(p["age"]) < 0.9)
+	queue_redraw()  # floats, pings, and lit-boat bounties all move every frame
 
 ## Boats no longer in play, one way or another — sunk or rammed home. With
 ## spawner.remaining_to_spawn(), (wave_size - resolved_count()) always equals
@@ -60,6 +73,9 @@ func resolved_count() -> int:
 	return kills + rammed
 
 func _on_boat_spawned(boat: Boat) -> void:
+	# Contact ping: a new blip on the water should be felt, not discovered.
+	_pings.append({"position": boat.global_position, "age": 0.0})
+	Sfx.play("ui_click", -10.0, 0.45)
 	boat.died.connect(_on_boat_died)
 	boat.reached_lighthouse.connect(func(rammer: Boat) -> void:
 		rammed += 1
@@ -71,6 +87,10 @@ func _on_boat_spawned(boat: Boat) -> void:
 			_float_text(rammer.global_position, "BARRICADE", Color(0.65, 0.9, 1.0))
 		hull_damage_taken += damage
 		lighthouse.take_damage(damage)
+		# The cost of a crash lands as a number at the tower, not just a
+		# shorter bar in the corner.
+		_float_text(lighthouse.global_position + Vector2(0, -34), "-%d HULL" % damage,
+			Color(0.95, 0.3, 0.25), 22)
 		if campaign_mode:
 			CampaignState.hull = int(lighthouse.health)
 	)
@@ -185,6 +205,21 @@ func _check_for_dawn() -> void:
 		CampaignState.set_night_result(stats)
 	night_won.emit(stats)
 
+## The sea as a watched instrument, not black debug space: faint range
+## rings, compass ticks on the horizon, and a static speckle field. The F3
+## overlay still owns labels, spokes, and vectors.
+func _draw_ocean() -> void:
+	var faint := Color(0.5, 0.7, 0.9, 0.05)
+	for p in _sea_speckle:
+		draw_circle(p, 1.0, faint)
+	for radius in OceanGrid.RING_RADII:
+		draw_arc(Vector2.ZERO, radius, 0.0, TAU, 96, Color(0.5, 0.7, 0.9, 0.07), 1.0)
+	var horizon: float = OceanGrid.ring_radius(OceanGrid.Ring.HORIZON)
+	for i in 16:
+		var dir := Vector2.from_angle(TAU * float(i) / 16.0)
+		var tick := 12.0 if i % 4 == 0 else 6.0
+		draw_line(dir * (horizon - tick), dir * horizon, Color(0.5, 0.7, 0.9, 0.16), 1.0)
+
 func _base_reward(boat: Boat) -> int:
 	if boat.max_health >= 8.0:
 		return 8
@@ -211,6 +246,11 @@ func _float_text(pos: Vector2, text: String, color: Color, size: int = 16) -> vo
 
 func _draw() -> void:
 	var font := ThemeDB.fallback_font
+	_draw_ocean()
+	for ping in _pings:
+		var t := float(ping["age"]) / 0.9
+		draw_arc(to_local(ping["position"]), 6.0 + 34.0 * t, 0.0, TAU, 24,
+			Color(0.6, 0.85, 1.0, 0.5 * (1.0 - t)), 1.5)
 	# Bounty on lit boats: target value is part of the aiming decision —
 	# a heavy is worth leaving two skiffs alone for.
 	for node in get_tree().get_nodes_in_group("boats"):
