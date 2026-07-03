@@ -438,39 +438,56 @@ func night_rng() -> RandomNumberGenerator:
 	rng.seed = hash([run_seed, day])
 	return rng
 
+## Compressed ramp: the old one kept heavies out until day 15 — most runs
+## ended around day 25, so the mine-vs-heavy decision (the reason the
+## forecast exists) was dormant for two-thirds of the game. Now: fast
+## boats from day 3, first heavy guaranteed on night 5 (see night_plan).
 func raid_profile() -> Dictionary:
-	if day <= 3:
+	if day <= 2:
 		return {
 			"profile_name": "Calm waters",
-			"wave_size": 3 + mini(day - 1, 2),
+			"wave_size": 2 + day,
 			"fast_weight": 0.0,
 			"heavy_weight": 0.0,
 			"max_simultaneous": 1,
 			"speed_scale": 0.7,
-			"start_interval": 4.0,
-			"min_interval": 3.0,
+			"start_interval": 3.6,
+			"min_interval": 2.8,
 			"first_spawn_delay": 1.5,
 			"use_v0_hazards": false,
 		}
-	if day <= 7:
+	if day <= 4:
 		return {
 			"profile_name": "Rising chop",
-			"wave_size": 5 + int(day >= 6) + int(day >= 7),
-			"fast_weight": 0.12 if day >= 6 else 0.0,
+			"wave_size": 3 + day - 2,
+			"fast_weight": 0.15,
 			"heavy_weight": 0.0,
-			"max_simultaneous": 2 if day >= 6 else 1,
-			"speed_scale": 0.75 + 0.03 * float(day - 4),
-			"start_interval": 3.6,
+			"max_simultaneous": 1 if day == 3 else 2,
+			"speed_scale": 0.75,
+			"start_interval": 3.4,
 			"min_interval": 2.4,
+			"first_spawn_delay": 1.2,
+			"use_v0_hazards": false,
+		}
+	if day <= 9:
+		return {
+			"profile_name": "Heavy weather",
+			"wave_size": 5 + (day - 5) / 2,
+			"fast_weight": 0.2,
+			"heavy_weight": 0.08,
+			"max_simultaneous": 2,
+			"speed_scale": 0.8 + 0.02 * float(day - 5),
+			"start_interval": 3.2,
+			"min_interval": 2.2,
 			"first_spawn_delay": 1.2,
 			"use_v0_hazards": false,
 		}
 	if day <= 14:
 		return {
 			"profile_name": "Fast raiders",
-			"wave_size": mini(7 + int((day - 8) / 2), 10),
+			"wave_size": mini(7 + (day - 10) / 2, 10),
 			"fast_weight": 0.25,
-			"heavy_weight": 0.0,
+			"heavy_weight": 0.12,
 			"max_simultaneous": 2,
 			"speed_scale": 0.9,
 			"start_interval": 3.0,
@@ -514,6 +531,10 @@ func night_plan() -> Array[String]:
 			plan.append("fast")
 		else:
 			plan.append("basic")
+	# Night 5 always ends with a heavy: one telegraphed teaching moment —
+	# the forecast warns, mines answer, the lesson sticks.
+	if day == 5 and not plan.has("heavy"):
+		plan[plan.size() - 1] = "heavy"
 	return plan
 
 ## "5 boats: 4 skiffs, 1 heavy hull" — the day is an answer to this line.

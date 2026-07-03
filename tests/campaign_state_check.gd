@@ -28,5 +28,9 @@ func _init() -> void:
 	assert(plan == state.night_plan(), "night plan must be deterministic")
 	assert(state.forecast_text().contains("boats") or state.forecast_text().contains("skiff"))
 
+	# Night 5 always carries the teaching heavy.
+	state.day = 5
+	assert(state.night_plan().has("heavy"), "night 5 must include a heavy")
+
 func _process(_delta: float) -> bool:
 	return true
