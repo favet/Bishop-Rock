@@ -12,6 +12,7 @@ var _health_lag_fill: ColorRect
 var _health_fill: ColorRect
 var _status: Label
 var _enemy_status: Label
+var _timer_label: Label
 var _game_over: Control
 var _game_over_label: Label
 
@@ -45,6 +46,7 @@ func _process(delta: float) -> void:
 		_lighthouse_signal_connected = true
 
 	_update_health(delta)
+	_update_timer()
 	_update_enemy_status()
 	_update_damage_feedback(delta)
 
@@ -80,15 +82,18 @@ func _update_health(delta: float) -> void:
 	]
 
 func _update_enemy_status() -> void:
-	var spawner := _board.spawner
 	var at_sea := get_tree().get_nodes_in_group("boats").size()
-	var incoming := spawner.remaining_to_spawn()
-	var remaining_total := maxi(spawner.wave_size - _board.resolved_count(), 0)
 	var tally := "   Earned +%ds" % _board.gold_earned if _board.gold_earned > 0 else ""
-	if incoming > 0:
-		_enemy_status.text = "Contacts: %d remaining   Sunk %d%s" % [remaining_total, _board.kills, tally]
+	if at_sea > 0:
+		_enemy_status.text = "Sweep the beam. Confirm targets by light.%s" % tally
 	else:
-		_enemy_status.text = "Contacts: %d on the water   Sunk %d%s" % [at_sea, _board.kills, tally]
+		_enemy_status.text = "Sea quiet. Keep sweeping.%s" % tally
+
+func _update_timer() -> void:
+	var seconds := ceili(_board.time_remaining())
+	var minutes := seconds / 60
+	var remainder := seconds % 60
+	_timer_label.text = "%02d:%02d" % [minutes, remainder]
 
 func _update_damage_feedback(delta: float) -> void:
 	if _damage_pulse_age >= 0.0:
@@ -117,8 +122,18 @@ func _on_lighthouse_damaged(_amount: float) -> void:
 	_health_lag_t = 0.0
 
 func _build_ui() -> void:
+	_timer_label = Label.new()
+	_timer_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_timer_label.offset_top = 6
+	_timer_label.offset_bottom = 74
+	_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_timer_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_timer_label.add_theme_font_size_override("font_size", 56)
+	_timer_label.add_theme_color_override("font_color", Color(0.96, 0.78, 0.34))
+	add_child(_timer_label)
+
 	var panel := VBoxContainer.new()
-	panel.position = Vector2(12, 10)
+	panel.position = Vector2(12, 82)
 	add_child(panel)
 	_build_health_bar(panel)
 	_status = Label.new()

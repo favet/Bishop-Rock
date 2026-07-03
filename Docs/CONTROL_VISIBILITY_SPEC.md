@@ -28,6 +28,10 @@ Start with **beam-as-reticle**:
 
 ## Visibility Model
 
+Current starter campaign: the player must sweep the beam to find boats.
+Spawn pings, contact ticks, and free last-known ghosts are disabled; those
+belong to future sonar/night-vision upgrades.
+
 Use both main-map memory and a small secondary radar/sonar-style display, but do not make the player stare only at the mini-map.
 
 ### Main Screen States

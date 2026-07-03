@@ -20,6 +20,7 @@ var perfect_bonus_earned: int = 0
 var perfect_kills: int = 0
 var hull_damage_taken: int = 0
 var defenses_consumed: Dictionary = {"mines": 0, "barricades": 0}
+var night_duration: float = 65.0
 
 @onready var lighthouse: Lighthouse = $Lighthouse
 @onready var spawner: BoatSpawner = $BoatSpawner
@@ -27,6 +28,7 @@ var defenses_consumed: Dictionary = {"mines": 0, "barricades": 0}
 @onready var _gun: MainGun = $Lighthouse/MainGun
 @onready var _beam: LighthouseBeam = $Lighthouse/Beam
 @onready var _turret: ShoreTurret = $Lighthouse/Turret
+@onready var _visibility: VisibilitySystem = $VisibilitySystem
 
 var _dawn_emitted: bool = false
 var _floating_texts: Array[Dictionary] = []
@@ -59,7 +61,8 @@ func _process(delta: float) -> void:
 	for text in _floating_texts:
 		text["age"] = float(text["age"]) + delta
 		text["position"] = text["position"] + Vector2(0, -22) * delta
-	_floating_texts = _floating_texts.filter(func(t: Dictionary) -> bool: return float(t["age"]) < 1.0)
+	_floating_texts = _floating_texts.filter(func(t: Dictionary) -> bool:
+		return float(t["age"]) < float(t.get("life", 1.0)))
 	for ping in _pings:
 		ping["age"] = float(ping["age"]) + delta
 	_pings = _pings.filter(func(p: Dictionary) -> bool: return float(p["age"]) < 0.9)
@@ -73,9 +76,6 @@ func resolved_count() -> int:
 	return kills + rammed
 
 func _on_boat_spawned(boat: Boat) -> void:
-	# Contact ping: a new blip on the water should be felt, not discovered.
-	_pings.append({"position": boat.global_position, "age": 0.0})
-	Sfx.play("ui_click", -10.0, 0.45)
 	boat.died.connect(_on_boat_died)
 	boat.reached_lighthouse.connect(func(rammer: Boat) -> void:
 		rammed += 1
@@ -112,7 +112,7 @@ func _on_boat_died(boat: Boat) -> void:
 		var bonus := _perfect_kill_bonus(boat)
 		reward += bonus
 		perfect_bonus_earned += bonus
-		label = "+%ds PERFECT" % reward
+		label = "PERFECT\n+%d" % reward
 		perfect_kills += 1
 		perfect_kill.emit()
 	gold_earned += reward
@@ -122,7 +122,7 @@ func _on_boat_died(boat: Boat) -> void:
 		CampaignState.run_gold_earned += reward
 		if boat.killed_by_perfect:
 			CampaignState.run_perfects += 1
-	_float_text(boat.global_position, label, Color(1.0, 0.85, 0.25), 30 if is_perfect else 16)
+	_float_text(boat.global_position, label, Color(1.0, 0.85, 0.25), 30 if is_perfect else 16, is_perfect)
 
 func _on_shot_hit(boat: Boat, quality: int, killed: bool) -> void:
 	if killed or quality != MainGun.ShotQuality.PERFECT or boat.perfect_reward_claimed:
@@ -132,7 +132,7 @@ func _on_shot_hit(boat: Boat, quality: int, killed: bool) -> void:
 	gold_earned += 1
 	if campaign_mode:
 		CampaignState.gold += 1
-	_float_text(boat.global_position, "+1g PERFECT", Color(1.0, 0.45, 0.3))
+	_float_text(boat.global_position, "PERFECT\n+1", Color(1.0, 0.45, 0.3), 26, true)
 
 func _on_lighthouse_destroyed() -> void:
 	game_over = true
@@ -153,6 +153,7 @@ func _apply_campaign_profile() -> void:
 	spawner.start_interval = float(profile["start_interval"])
 	spawner.min_interval = float(profile["min_interval"])
 	spawner.first_spawn_delay = float(profile["first_spawn_delay"])
+	night_duration = float(profile.get("night_duration", 65.0))
 	lighthouse.max_health = CampaignState.max_hull
 	lighthouse.health = CampaignState.hull
 	_beam.turn_speed_multiplier = CampaignState.beam_turn_multiplier()
@@ -161,6 +162,10 @@ func _apply_campaign_profile() -> void:
 		_beam.cone_half_angle_deg *= 1.25
 	_gun.reload_time *= CampaignState.reload_multiplier()
 	_turret.enabled = CampaignState.turret_unlocked
+	if campaign_mode:
+		_visibility.spotted_radius = 0.0
+		_visibility.show_contact_ticks = false
+		_visibility.show_ghosts = false
 	if not bool(profile.get("use_v0_hazards", false)):
 		for child in _hazards.get_children():
 			child.queue_free()
@@ -184,7 +189,7 @@ func _auto_use_mines() -> void:
 			return
 
 func _check_for_dawn() -> void:
-	if _dawn_emitted or not spawner.wave_complete() or get_tree().get_nodes_in_group("boats").size() > 0:
+	if _dawn_emitted or elapsed < night_duration or not spawner.wave_complete() or get_tree().get_nodes_in_group("boats").size() > 0:
 		return
 	_dawn_emitted = true
 	spawner.active = false
@@ -222,10 +227,10 @@ func _draw_ocean() -> void:
 
 func _base_reward(boat: Boat) -> int:
 	if boat.max_health >= 8.0:
-		return 8
+		return 6
 	if boat.max_health <= 2.0:
-		return 4
-	return 3
+		return 3
+	return 2
 
 func _perfect_kill_bonus(boat: Boat) -> int:
 	return 4 if boat.max_health >= 8.0 else 2
@@ -240,8 +245,19 @@ func _crash_damage(boat: Boat) -> int:
 		damage = 4
 	return ceili(damage * 0.7) if CampaignState.mercy else damage
 
-func _float_text(pos: Vector2, text: String, color: Color, size: int = 16) -> void:
-	_floating_texts.append({position = pos, text = text, color = color, age = 0.0, size = size})
+func time_remaining() -> float:
+	return maxf(night_duration - elapsed, 0.0)
+
+func _float_text(pos: Vector2, text: String, color: Color, size: int = 16, perfect: bool = false) -> void:
+	_floating_texts.append({
+		position = pos,
+		text = text,
+		color = color,
+		age = 0.0,
+		size = size,
+		life = 1.55 if perfect else 1.0,
+		perfect = perfect,
+	})
 	queue_redraw()
 
 func _draw() -> void:
@@ -260,7 +276,16 @@ func _draw() -> void:
 				"%ds" % _base_reward(boat), HORIZONTAL_ALIGNMENT_CENTER, 40, 12,
 				Color(1.0, 0.85, 0.25, 0.8))
 	for item in _floating_texts:
-		var t := float(item["age"])
+		var life := float(item.get("life", 1.0))
+		var t := float(item["age"]) / life
 		var color: Color = item["color"]
 		color.a = 1.0 - t
-		draw_string(font, to_local(item["position"]), item["text"], HORIZONTAL_ALIGNMENT_CENTER, 160, int(item.get("size", 16)), color)
+		var local := to_local(item["position"])
+		if bool(item.get("perfect", false)):
+			var origin := local + Vector2(-150, -48)
+			draw_string(font, origin, "PERFECT", HORIZONTAL_ALIGNMENT_CENTER, 300, int(item.get("size", 30)), color)
+			var reward := str(item["text"]).get_slice("\n", 1)
+			var reward_color := Color(1.0, 0.95, 0.55, color.a)
+			draw_string(font, origin + Vector2(0, 34), reward, HORIZONTAL_ALIGNMENT_CENTER, 300, 24, reward_color)
+		else:
+			draw_string(font, local + Vector2(-90, 0), item["text"], HORIZONTAL_ALIGNMENT_CENTER, 180, int(item.get("size", 16)), color)

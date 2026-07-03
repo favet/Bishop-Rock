@@ -12,6 +12,8 @@ extends Node2D
 
 @export var spotted_radius: float = 140.0
 @export var ghost_lifetime: float = 4.0
+@export var show_contact_ticks: bool = true
+@export var show_ghosts: bool = true
 
 class GhostRecord:
 	var position: Vector2
@@ -33,7 +35,7 @@ func _physics_process(delta: float) -> void:
 		var boat := node as Boat
 		var previous := boat.vis_state
 		var next := _compute_state(boat)
-		if previous == Boat.VisState.ILLUMINATED and next != Boat.VisState.ILLUMINATED:
+		if show_ghosts and previous == Boat.VisState.ILLUMINATED and next != Boat.VisState.ILLUMINATED:
 			_add_ghost(boat)
 		boat.vis_state = next
 
@@ -45,7 +47,7 @@ func _physics_process(delta: float) -> void:
 func _compute_state(boat: Boat) -> Boat.VisState:
 	if _beam.is_point_illuminated(boat.global_position):
 		return Boat.VisState.ILLUMINATED
-	if boat.global_position.length() <= spotted_radius:
+	if spotted_radius > 0.0 and boat.global_position.length() <= spotted_radius:
 		return Boat.VisState.SPOTTED
 	for node in get_tree().get_nodes_in_group("buoys"):
 		var buoy := node as Buoy
@@ -61,13 +63,16 @@ func _add_ghost(boat: Boat) -> void:
 
 func _draw() -> void:
 	# Fading last-known silhouettes.
-	for ghost in _ghosts:
-		var alpha := 0.55 * (1.0 - ghost.age / ghost_lifetime)
-		draw_set_transform(ghost.position, ghost.heading, Vector2.ONE)
-		draw_colored_polygon(GHOST_HULL, Color(0.8, 0.85, 0.95, alpha))
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	if show_ghosts:
+		for ghost in _ghosts:
+			var alpha := 0.55 * (1.0 - ghost.age / ghost_lifetime)
+			draw_set_transform(ghost.position, ghost.heading, Vector2.ONE)
+			draw_colored_polygon(GHOST_HULL, Color(0.8, 0.85, 0.95, alpha))
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 	# Vague sector ticks for unseen contacts, at the deep-water boundary.
+	if not show_contact_ticks:
+		return
 	var tick_radius := OceanGrid.ring_radius(OceanGrid.Ring.DEEP) + 12.0
 	for node in get_tree().get_nodes_in_group("boats"):
 		var boat := node as Boat
