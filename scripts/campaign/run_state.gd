@@ -13,24 +13,28 @@ const START_PROJECTS := {
 	"lens_crank_1": {
 		"display_name": "Lens Crank",
 		"effect": "Beam turns 25% faster",
+		"why": "Aim faster. Better against swift boats.",
 		"start_cost": {"gold": 18, "scrap": 9},
 		"work_required": 2,
 	},
 	"rifle_breech_1": {
 		"display_name": "Rifle Breech",
 		"effect": "Reload 20% faster",
+		"why": "More shots per night. More boats stopped.",
 		"start_cost": {"gold": 24, "scrap": 11},
 		"work_required": 3,
 	},
 	"reinforced_hull_1": {
 		"display_name": "Reinforced Hull",
 		"effect": "Max hull +15 and heal +15",
+		"why": "A bigger buffer between you and the dark.",
 		"start_cost": {"gold": 24, "wood": 10, "scrap": 3},
 		"work_required": 2,
 	},
 	"rusty_autoturret": {
 		"display_name": "Rusty Autoturret",
 		"effect": "A second gun fires on its own",
+		"why": "The only gun that never sleeps.",
 		"start_cost": {"gold": 40, "scrap": 20},
 		"work_required": 4,
 	},

@@ -480,6 +480,9 @@ func _project_card(project_id: String) -> VBoxContainer:
 	inner.add_theme_constant_override("separation", 3)
 	wrap.add_child(inner)
 	_card_title(inner, project["display_name"], project["effect"])
+	# The cost says what it takes; this says why you should care.
+	if project.has("why"):
+		_small_label(inner, project["why"], Color(0.82, 0.74, 0.58))
 	_small_label(inner, "Requirements", BRASS)
 	var cost: Dictionary = project["start_cost"]
 	for key in cost.keys():
@@ -498,11 +501,22 @@ func _project_card(project_id: String) -> VBoxContainer:
 		GREEN if work_done >= int(project["work_required"]) else MUTED)
 	work_row.add_child(work_label)
 	if not CampaignState.can_afford(cost) and not CampaignState.active_projects.has(project_id) and not CampaignState.completed_projects.has(project_id):
-		_small_label(inner, "Missing", RED)
+		# Close = motivation ("almost ready"); far = red shopping list.
+		var shortfalls: Array[String] = []
+		var total_short := 0
 		for key in cost.keys():
 			var missing := int(cost[key]) - int(CampaignState.get(key))
 			if missing > 0:
-				_resource_row(inner, "-", key, missing, RED, _gain_hint(key))
+				shortfalls.append("%d %s" % [missing, _display_resource_name(key)])
+				total_short += missing
+		if total_short <= 6:
+			_small_label(inner, "Almost ready: need %s" % " and ".join(shortfalls), Color(0.95, 0.8, 0.4))
+		else:
+			_small_label(inner, "Missing", RED)
+			for key in cost.keys():
+				var missing := int(cost[key]) - int(CampaignState.get(key))
+				if missing > 0:
+					_resource_row(inner, "-", key, missing, RED, _gain_hint(key))
 	var button := Button.new()
 	button.custom_minimum_size = Vector2(0, 30)
 	button.pressed.connect(Sfx.play.bind("ui_click"))
