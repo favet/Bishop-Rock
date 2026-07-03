@@ -253,11 +253,12 @@ const OPPORTUNITIES := {
 	},
 }
 
-## Weather rolled per day: one enum, two knobs on the night.
+## Weather rolled per day: one enum, two knobs on the night. desc states the
+## actual effect — an unexplained label is flavor noise, not information.
 const WEATHERS := {
-	"clear": {"label": "Clear", "speed": 1.0, "cone": 1.0},
-	"fog": {"label": "Fog", "speed": 0.9, "cone": 0.8},
-	"swell": {"label": "Heavy swell", "speed": 1.1, "cone": 1.0},
+	"clear": {"label": "Clear", "speed": 1.0, "cone": 1.0, "desc": "Clear skies."},
+	"fog": {"label": "Fog", "speed": 0.9, "cone": 0.8, "desc": "Fog - your beam narrows, boats ride slower."},
+	"swell": {"label": "Heavy swell", "speed": 1.1, "cone": 1.0, "desc": "Heavy swell - boats ride faster."},
 }
 var today_opportunity: String
 var weather: String

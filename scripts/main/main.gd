@@ -113,12 +113,6 @@ func _show_start_screen() -> void:
 	list.add_theme_constant_override("separation", 12)
 	box.add_child(list)
 	_card_title(list, "Bishop Rock", "The sea never relents. Hold the light, night after night.")
-	var seed_input := LineEdit.new()
-	seed_input.placeholder_text = "Seed (optional - share a run)"
-	list.add_child(seed_input)
-	var mercy := CheckBox.new()
-	mercy.text = "Keeper's Mercy - slower boats, wider beam, softer crashes"
-	list.add_child(mercy)
 	if CampaignState.has_save():
 		var resume := Button.new()
 		resume.text = "Continue Campaign"
@@ -130,6 +124,10 @@ func _show_start_screen() -> void:
 				_show_day_hub()  # resume at dawn; Start Night reloads into the raid
 		)
 		list.add_child(resume)
+	# Options sit below Start at a visibly lower rank — they're for the
+	# second run, not the first.
+	var mercy := CheckBox.new()
+	var seed_input := LineEdit.new()
 	var start := Button.new()
 	start.text = "Start New Campaign"
 	start.custom_minimum_size = Vector2(0, 44)
@@ -145,6 +143,16 @@ func _show_start_screen() -> void:
 		Sfx.play("foghorn", -4.0)
 	)
 	list.add_child(start)
+	var options := HBoxContainer.new()
+	options.add_theme_constant_override("separation", 10)
+	list.add_child(options)
+	mercy.text = "Keeper's Mercy"
+	mercy.tooltip_text = "Slower boats, wider beam, softer crashes.\nMercy runs keep their own record ladder."
+	options.add_child(mercy)
+	seed_input.placeholder_text = "Seed"
+	seed_input.tooltip_text = "Type a seed to replay a shared run."
+	seed_input.custom_minimum_size = Vector2(120, 0)
+	options.add_child(seed_input)
 
 func _show_dawn(stats: Dictionary) -> void:
 	_campaign_layer.add_child(_full_screen_dim())
@@ -155,14 +163,14 @@ func _show_dawn(stats: Dictionary) -> void:
 	list.add_theme_constant_override("separation", 8)
 	box.add_child(list)
 	_card_title(list, "Dawn after Night %d" % int(stats["night"]), "The sea quiets. The damage remains.")
+	# Three lines, not a stat wall: the fight, the purse, the damage.
 	var consumed: Dictionary = stats["defenses_consumed"]
 	for line in [
-		"Boats sunk: %d (%d perfect)" % [int(stats["kills"]), int(stats.get("perfects", 0))],
-		"Boats crashed: %d" % int(stats["crashed"]),
-		"Shillings earned: %d" % int(stats["gold_earned"]),
-		"Hull damage taken: %d" % int(stats["hull_damage_taken"]),
-		"Hull: %d/%d" % [int(stats["hull"]), int(stats["max_hull"])],
-		"Repair to full: about %s" % _repair_hint(),
+		"Sunk %d (%d perfect) - %d crashed" % [int(stats["kills"]),
+			int(stats.get("perfects", 0)), int(stats["crashed"])],
+		"Earned %d shillings" % int(stats["gold_earned"]),
+		"Hull %d/%d (took %d) - full repair: %s" % [int(stats["hull"]),
+			int(stats["max_hull"]), int(stats["hull_damage_taken"]), _repair_hint()],
 	]:
 		_small_label(list, line, TEXT)
 	# Attribution: purchases must be seen paying off or they stop happening.
@@ -487,10 +495,9 @@ func _tonight_panel() -> PanelContainer:
 	title.add_theme_font_size_override("font_size", 18)
 	title.add_theme_color_override("font_color", BRASS)
 	box.add_child(title)
-	var profile := CampaignState.raid_profile()
 	_small_label(box, CampaignState.forecast_text(), TEXT, false)
-	_small_label(box, "%s - %s" % [profile["profile_name"],
-		RunState.WEATHERS[CampaignState.weather]["label"]], MUTED, false)
+	_small_label(box, RunState.WEATHERS[CampaignState.weather]["desc"], MUTED, false)
+	_small_label(box, "Each crash costs ~6 hull; heavies 13.", MUTED, false)
 	var defenses := HBoxContainer.new()
 	defenses.add_theme_constant_override("separation", 8)
 	box.add_child(defenses)
