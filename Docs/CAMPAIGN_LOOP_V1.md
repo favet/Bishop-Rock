@@ -53,9 +53,11 @@ When the wave is fully spawned and all boats are resolved, the dawn summary show
 
 ## Day Hub
 
-Current day hub: top core resources, focused tabs for Situation, Keep Light,
-Provisions, and Workshop, and a fixed "Light the Lantern" button at the
-bottom. No scrollbars at the current content level.
+Current day hub: top core resources, a keeper-table object selector for
+Situation, Keep Light, Provisions, and Workshop, and a fixed "Light the
+Lantern" button at the bottom. No scrollbars at the current content level.
+The selected object changes the surface language: chart/logbook, lighthouse
+work, shore provisions, or blueprint sheets.
 
 The day hub is a brass-on-iron card layout built in `scripts/main/main.gd`:
 

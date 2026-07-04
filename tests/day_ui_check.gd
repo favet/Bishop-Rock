@@ -1,5 +1,5 @@
 extends Node
-## Headless day-UI check. Boots Main, opens the one-screen day hub, and
+## Headless day-UI check. Boots Main, opens the keeper-table day hub, and
 ## asserts the UI-clarity contract: core-only top bar, tokenized Daylight
 ## with hover ghost preview, honest hull bar, all cards visible at once, a
 ## truthful Tonight forecast, and a fixed Start Night button. Run with:
@@ -49,14 +49,17 @@ func _ready() -> void:
 	assert(main._hull_fill.value == 79.0, "hull bar must use current hull")
 	assert(main._hull_label.text == "HULL 79/85")
 
-	# One screen: both action groups and all projects visible at once.
+	# Focused pages: all mechanics are present, but the player navigates them
+	# from the keeper's worktable instead of identical text-board tabs.
 	assert(main._light_list.get_child_count() >= 3, "Keep the Light column missing cards")
 	assert(main._prov_list.get_child_count() >= 4, "Provisions column missing cards")
 	assert(main._project_list.get_child_count() == CampaignState.START_PROJECTS.size())
 	assert(main.find_children("*", "ScrollContainer", true, false).is_empty(),
 		"day hub must not use scrollbars at current content level")
-	assert(not main.find_children("DayTabs", "TabContainer", true, false).is_empty(),
-		"day hub must use focused tab pages")
+	assert(not main.find_children("KeeperWorktable", "HBoxContainer", true, false).is_empty(),
+		"day hub must use the keeper worktable")
+	assert(not main.find_children("KeeperTable", "PanelContainer", true, false).is_empty(),
+		"day hub must show the visual zone selector")
 
 	# The Tonight forecast tells the truth: it counts the same plan the
 	# spawner will consume.

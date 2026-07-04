@@ -17,6 +17,7 @@ const TEXT := Color(0.93, 0.88, 0.78)
 const MUTED := Color(0.68, 0.64, 0.55)
 const RED := Color(0.95, 0.34, 0.25)
 const GREEN := Color(0.38, 0.86, 0.45)
+const DayIllustrationScript := preload("res://ui/day_illustration.gd")
 
 var _slowed: bool = false
 var _frozen: bool = false
@@ -34,6 +35,8 @@ var _daylight_preview_spend: int = 0
 var _light_list: GridContainer
 var _prov_list: GridContainer
 var _project_list: GridContainer
+var _day_pages: Dictionary = {}
+var _day_zone_buttons: Dictionary = {}
 var _tonight_holder: VBoxContainer
 var _today_event_holder: VBoxContainer
 var _log_label: Label
@@ -232,22 +235,62 @@ func _show_day_hub() -> void:
 	_top_bar.add_theme_constant_override("separation", 10)
 	layout.add_child(_top_bar)
 
-	var body := TabContainer.new()
-	body.name = "DayTabs"
+	var body := HBoxContainer.new()
+	body.name = "KeeperWorktable"
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	body.add_theme_font_size_override("font_size", 18)
-	body.add_theme_color_override("font_selected_color", TEXT)
-	body.add_theme_color_override("font_unselected_color", MUTED)
-	body.add_theme_stylebox_override("panel", _panel_style(Color(0.055, 0.065, 0.07), BRASS_DARK, 1))
-	body.add_theme_stylebox_override("tab_selected", _panel_style(PANEL, BRASS, 2))
-	body.add_theme_stylebox_override("tab_unselected", _panel_style(Color(0.065, 0.075, 0.08), BRASS_DARK, 1))
-	body.add_theme_stylebox_override("tab_hovered", _panel_style(PANEL_HOVER, BRASS, 1))
+	body.add_theme_constant_override("separation", 16)
 	layout.add_child(body)
+
+	var table := PanelContainer.new()
+	table.name = "KeeperTable"
+	table.custom_minimum_size = Vector2(360, 0)
+	table.add_theme_stylebox_override("panel", _panel_style(Color(0.08, 0.07, 0.055), BRASS_DARK, 1))
+	body.add_child(table)
+	var table_box := VBoxContainer.new()
+	table_box.add_theme_constant_override("separation", 12)
+	table.add_child(table_box)
+	var table_title := Label.new()
+	table_title.text = "KEEPER'S TABLE"
+	table_title.add_theme_font_size_override("font_size", 20)
+	table_title.add_theme_color_override("font_color", BRASS)
+	table_box.add_child(table_title)
+	_small_label(table_box, "Choose the work in front of you.", MUTED)
+	var selector := GridContainer.new()
+	selector.columns = 2
+	selector.add_theme_constant_override("h_separation", 10)
+	selector.add_theme_constant_override("v_separation", 10)
+	table_box.add_child(selector)
+	for zone in [
+		{"id": "situation", "title": "Storm Chart", "sub": "Today and tonight", "visual": "chart"},
+		{"id": "light", "title": "Lantern Room", "sub": "Hull and defenses", "visual": "light"},
+		{"id": "provisions", "title": "Shore Stores", "sub": "Food and salvage", "visual": "provisions"},
+		{"id": "workshop", "title": "Blueprints", "sub": "Long work", "visual": "blueprint"},
+	]:
+		var button := _zone_button(zone)
+		selector.add_child(button)
+		_day_zone_buttons[zone["id"]] = button
+
+	var detail := PanelContainer.new()
+	detail.name = "DayDetailStage"
+	detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	detail.add_theme_stylebox_override("panel", _panel_style(Color(0.055, 0.065, 0.07), BRASS_DARK, 1))
+	body.add_child(detail)
+	var page_host := MarginContainer.new()
+	for side in ["left", "right", "top", "bottom"]:
+		page_host.add_theme_constant_override("margin_" + side, 14)
+	detail.add_child(page_host)
+	var pages := Control.new()
+	pages.name = "DayPages"
+	pages.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pages.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	page_host.add_child(pages)
 
 	var situation := HBoxContainer.new()
 	situation.name = "Situation"
+	situation.set_anchors_preset(Control.PRESET_FULL_RECT)
 	situation.add_theme_constant_override("separation", 18)
-	body.add_child(situation)
+	pages.add_child(situation)
+	_day_pages["situation"] = situation
 
 	# LEFT — TODAY: the situation (last night's consequence, today's event,
 	# tonight's threat). The question the other columns answer.
@@ -270,17 +313,21 @@ func _show_day_hub() -> void:
 	_tonight_holder = VBoxContainer.new()
 	tonight.add_child(_tonight_holder)
 
-	var light_page := _tab_page("Keep Light")
-	body.add_child(light_page)
+	var light_page := _zone_page("light", "Lantern Room", "Repair, brace, and arm the tower.", "light")
+	pages.add_child(light_page)
+	_day_pages["light"] = light_page
 	_light_list = _card_grid(light_page)
 
-	var prov_page := _tab_page("Provisions")
-	body.add_child(prov_page)
+	var prov_page := _zone_page("provisions", "Shore Stores", "Work the dock, pantry, and shallows.", "provisions")
+	pages.add_child(prov_page)
+	_day_pages["provisions"] = prov_page
 	_prov_list = _card_grid(prov_page)
 
-	var workshop_page := _tab_page("Workshop")
-	body.add_child(workshop_page)
+	var workshop_page := _zone_page("workshop", "Blueprint Bench", "Commit materials to visible power spikes.", "blueprint")
+	pages.add_child(workshop_page)
+	_day_pages["workshop"] = workshop_page
 	_project_list = _card_grid(workshop_page)
+	_show_day_page("situation")
 
 	var footer := HBoxContainer.new()
 	footer.add_theme_constant_override("separation", 14)
@@ -321,11 +368,28 @@ func _show_day_hub() -> void:
 	_refresh_day_ui()
 	_rebuild_day_cards()
 
-func _tab_page(title: String) -> MarginContainer:
-	var page := MarginContainer.new()
+func _zone_page(id: String, title: String, subtitle: String, visual: String) -> VBoxContainer:
+	var page := VBoxContainer.new()
 	page.name = title
-	for side in ["left", "right", "top", "bottom"]:
-		page.add_theme_constant_override("margin_" + side, 14)
+	page.set_anchors_preset(Control.PRESET_FULL_RECT)
+	page.add_theme_constant_override("separation", 14)
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 14)
+	page.add_child(header)
+	header.add_child(DayIllustrationScript.new(visual, Vector2(110, 82)))
+	var words := VBoxContainer.new()
+	words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(words)
+	var title_label := Label.new()
+	title_label.text = title.to_upper()
+	title_label.add_theme_font_size_override("font_size", 24)
+	title_label.add_theme_color_override("font_color", BRASS)
+	words.add_child(title_label)
+	_small_label(words, subtitle, MUTED)
+	var rule := ColorRect.new()
+	rule.custom_minimum_size = Vector2(0, 2)
+	rule.color = Color(BRASS.r, BRASS.g, BRASS.b, 0.45)
+	page.add_child(rule)
 	return page
 
 func _card_grid(parent: Control) -> GridContainer:
@@ -337,6 +401,52 @@ func _card_grid(parent: Control) -> GridContainer:
 	grid.add_theme_constant_override("v_separation", 14)
 	parent.add_child(grid)
 	return grid
+
+func _zone_button(zone: Dictionary) -> Button:
+	var button := Button.new()
+	button.name = "%sZoneButton" % zone["id"]
+	button.custom_minimum_size = Vector2(158, 142)
+	button.focus_mode = Control.FOCUS_ALL
+	button.add_theme_stylebox_override("normal", _zone_button_style(false))
+	button.add_theme_stylebox_override("hover", _zone_button_style(true))
+	button.add_theme_stylebox_override("focus", _zone_button_style(false))
+	button.pressed.connect(func() -> void:
+		Sfx.play("ui_click")
+		_show_day_page(zone["id"]))
+	var box := VBoxContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.set_anchors_preset(Control.PRESET_FULL_RECT)
+	box.add_theme_constant_override("separation", 5)
+	button.add_child(box)
+	box.add_child(DayIllustrationScript.new(zone["visual"], Vector2(126, 78)))
+	var title := Label.new()
+	title.text = zone["title"]
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 16)
+	title.add_theme_color_override("font_color", TEXT)
+	box.add_child(title)
+	var sub := Label.new()
+	sub.text = zone["sub"]
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sub.add_theme_font_size_override("font_size", 12)
+	sub.add_theme_color_override("font_color", MUTED)
+	box.add_child(sub)
+	return button
+
+func _show_day_page(page_id: String) -> void:
+	for id in _day_pages.keys():
+		var page := _day_pages[id] as Control
+		page.visible = id == page_id
+	for id in _day_zone_buttons.keys():
+		var button := _day_zone_buttons[id] as Button
+		var selected: bool = String(id) == page_id
+		button.add_theme_stylebox_override("normal", _zone_button_style(selected))
+		button.add_theme_stylebox_override("hover", _zone_button_style(true))
+		button.add_theme_stylebox_override("focus", _zone_button_style(selected))
+
+func _zone_button_style(selected: bool) -> StyleBoxFlat:
+	return _panel_style(PANEL_HOVER if selected else Color(0.075, 0.085, 0.085),
+		BRASS if selected else BRASS_DARK, 2 if selected else 1)
 
 func _rebuild_day_cards() -> void:
 	for list in [_light_list, _prov_list, _project_list, _today_event_holder]:
@@ -416,15 +526,22 @@ func _action_card(action: Dictionary) -> Button:
 	rows.add_theme_constant_override("separation", 3)
 	rows.position = Vector2(12, 8)
 	button.add_child(rows)
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 10)
+	rows.add_child(head)
+	head.add_child(DayIllustrationScript.new(_action_visual(action["id"]), Vector2(54, 48)))
+	var title_box := VBoxContainer.new()
+	title_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(title_box)
 	if action.has("badge"):
 		var badge_label := Label.new()
 		badge_label.text = action["badge"]["text"]
 		badge_label.add_theme_font_size_override("font_size", 12)
 		badge_label.add_theme_color_override("font_color", action["badge"]["color"])
-		rows.add_child(badge_label)
+		title_box.add_child(badge_label)
 		button.add_theme_stylebox_override("normal",
 			_panel_style(Color(0.075, 0.085, 0.085), action["badge"]["color"], 2))
-	_card_title(rows, action["name"], action["effect"], false)
+	_card_title(title_box, action["name"], action["effect"], false)
 	for key in cost.keys():
 		_have_need_row(rows, key, int(CampaignState.get(key)), int(cost[key]))
 	_trade_rows(rows, action.get("gain", {}), GREEN, "+")
@@ -503,10 +620,17 @@ func _project_card(project_id: String) -> VBoxContainer:
 	var inner := VBoxContainer.new()
 	inner.add_theme_constant_override("separation", 3)
 	wrap.add_child(inner)
-	_card_title(inner, project["display_name"], project["effect"])
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 10)
+	inner.add_child(header)
+	header.add_child(DayIllustrationScript.new("blueprint", Vector2(64, 56)))
+	var title_box := VBoxContainer.new()
+	title_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(title_box)
+	_card_title(title_box, project["display_name"], project["effect"])
 	# The cost says what it takes; this says why you should care.
 	if project.has("why"):
-		_small_label(inner, project["why"], Color(0.82, 0.74, 0.58))
+		_small_label(title_box, project["why"], Color(0.82, 0.74, 0.58))
 	_small_label(inner, "Requirements", BRASS)
 	var cost: Dictionary = project["start_cost"]
 	for key in cost.keys():
@@ -607,6 +731,20 @@ func _actions_for_group(group: String) -> Array[Dictionary]:
 		out.append(entry)
 	return out
 
+func _action_visual(action_id: String) -> String:
+	match action_id:
+		"patch_hull", "build_barricade":
+			return "repair"
+		"craft_mines":
+			return "mine"
+		"gather_driftwood", "dive_wreckage":
+			return "driftwood"
+		"fish":
+			return "fish"
+		"hearty_supper":
+			return "supper"
+	return "chart"
+
 ## Situation badges: the screen responds to the run. 2-3 cards get flagged
 ## as obviously relevant; the rest stay quiet.
 func _action_badge(id: String) -> Dictionary:
@@ -654,7 +792,15 @@ func _morning_report() -> PanelContainer:
 	wrap.add_child(box)
 	var stats := CampaignState.last_night_stats
 	if stats.is_empty():
-		_small_label(box, "The tower stands ready.", MUTED)
+		var head := HBoxContainer.new()
+		head.add_theme_constant_override("separation", 10)
+		box.add_child(head)
+		head.add_child(DayIllustrationScript.new("light", Vector2(64, 52)))
+		var words := VBoxContainer.new()
+		words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		head.add_child(words)
+		_small_label(words, "The tower stands ready.", TEXT, false)
+		_small_label(words, "No dawn report yet.", MUTED, false)
 		return wrap
 	var crashed := int(stats.get("crashed", 0))
 	var damage := int(stats.get("hull_damage_taken", 0))
@@ -678,11 +824,19 @@ func _tonight_panel() -> PanelContainer:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 4)
 	wrap.add_child(box)
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 10)
+	box.add_child(head)
+	head.add_child(DayIllustrationScript.new("chart", Vector2(82, 64)))
+	var title_box := VBoxContainer.new()
+	title_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(title_box)
 	var title := Label.new()
 	title.text = "TONIGHT"
-	title.add_theme_font_size_override("font_size", 18)
+	title.add_theme_font_size_override("font_size", 20)
 	title.add_theme_color_override("font_color", BRASS)
-	box.add_child(title)
+	title_box.add_child(title)
+	_small_label(title_box, "Forecast chart and standing defenses.", MUTED)
 	_small_label(box, CampaignState.forecast_text(), TEXT, false)
 	_small_label(box, RunState.WEATHERS[CampaignState.weather]["desc"], MUTED, false)
 	_small_label(box, "Each crash costs ~6 hull; heavies 13.", MUTED, false)

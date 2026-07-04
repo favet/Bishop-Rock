@@ -29,9 +29,10 @@
   deleted, not rebalanced.
 - Attribution at dawn: report says what mines fired, what barricades ate,
   perfect kills.
-- Focused day pages: top resources stay fixed, while tabs split Situation,
-  Keep Light, Provisions, and Workshop. No ugly scroll lists; each page gets
-  enough space to breathe, and Start Night is fixed.
+- Keeper-table navigation: top resources stay fixed, while four illustrated
+  table objects open Situation, Keep Light, Provisions, and Workshop. No ugly
+  scroll lists; each surface gets enough space to breathe, and Start Night is
+  fixed.
 
 ## Action diet (15 -> 8 + daily opportunity)
 
@@ -56,11 +57,11 @@ the diet. Keeper's Mercy remains the relief valve.
 
 ## Compelling-week pass (July 2026)
 
-- The day is a situation, not a menu: TODAY column carries the morning
-  consequence, the day's event card (news, not stock; passive events like
-  Calm Tide change rules instead of costing Daylight), and TONIGHT with a
-  threat line naming what answers it. Situation badges (HULL LOW / FOR
-  TONIGHT / TIMBER LOW) flag the 2-3 relevant cards.
+- The day is a place, not a tab strip: the keeper's table uses a storm chart,
+  lantern room, shore stores, and blueprint bench as the primary choices.
+  Situation carries the morning consequence, the day's event card (news, not
+  stock), and TONIGHT with a threat line naming what answers it. Situation
+  badges (HULL LOW / FOR TONIGHT / TIMBER LOW) flag the 2-3 relevant cards.
 - Fishing is a cast-timing minigame (spot choice -> strike band; quality
   poor->perfect by strikes landed) — the calm daytime mirror of the
   charge shot. Skill beats the old button; botching deep water pays nothing.
@@ -69,8 +70,8 @@ the diet. Keeper's Mercy remains the relief valve.
   drains as the night sends boats in. Starter runs do not show spawn pings,
   free contact ticks, or ghost ships; those belong to future sonar/night-vision
   upgrades.
-- Projects carry a "why it matters" line and an "Almost ready: need 5
-  Iron" state when within 6 resources of start.
+- Projects sit on blueprint sheets with a "why it matters" line and an
+  "Almost ready: need 5 Iron" state when within 6 resources of start.
 - Top bar pairs icons with words; the fixed button says "Light the Lantern"
   with night/weather, and warns about unspent Daylight; dawn ends with "The
   lighthouse still stands." and "Begin Day N".
