@@ -45,8 +45,8 @@ func _ready() -> void:
 		assert(main._daylight_tokens[i].modulate.a > 0.9, "tokens must restore after hover")
 
 	# Hull bar fill matches the label's own denominator (79/85, not /100).
-	var expected := 140.0 * 79.0 / 85.0
-	assert(absf(main._hull_fill.size.x - expected) < 0.5, "hull fill must use max_hull")
+	assert(main._hull_fill.max_value == 85.0, "hull bar must use max_hull")
+	assert(main._hull_fill.value == 79.0, "hull bar must use current hull")
 	assert(main._hull_label.text == "HULL 79/85")
 
 	# One screen: both action groups and all projects visible at once.
@@ -55,6 +55,8 @@ func _ready() -> void:
 	assert(main._project_list.get_child_count() == CampaignState.START_PROJECTS.size())
 	assert(main.find_children("*", "ScrollContainer", true, false).is_empty(),
 		"day hub must not use scrollbars at current content level")
+	assert(not main.find_children("DayTabs", "TabContainer", true, false).is_empty(),
+		"day hub must use focused tab pages")
 
 	# The Tonight forecast tells the truth: it counts the same plan the
 	# spawner will consume.

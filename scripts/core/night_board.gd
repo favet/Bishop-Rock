@@ -153,7 +153,8 @@ func _apply_campaign_profile() -> void:
 	spawner.start_interval = float(profile["start_interval"])
 	spawner.min_interval = float(profile["min_interval"])
 	spawner.first_spawn_delay = float(profile["first_spawn_delay"])
-	night_duration = float(profile.get("night_duration", 65.0))
+	spawner.spawn_window = float(profile.get("spawn_window", profile.get("night_duration", 35.0)))
+	night_duration = spawner.spawn_window
 	lighthouse.max_health = CampaignState.max_hull
 	lighthouse.health = CampaignState.hull
 	_beam.turn_speed_multiplier = CampaignState.beam_turn_multiplier()
@@ -189,7 +190,7 @@ func _auto_use_mines() -> void:
 			return
 
 func _check_for_dawn() -> void:
-	if _dawn_emitted or elapsed < night_duration or not spawner.wave_complete() or get_tree().get_nodes_in_group("boats").size() > 0:
+	if _dawn_emitted or not spawner.wave_complete() or get_tree().get_nodes_in_group("boats").size() > 0:
 		return
 	_dawn_emitted = true
 	spawner.active = false
@@ -246,7 +247,10 @@ func _crash_damage(boat: Boat) -> int:
 	return ceili(damage * 0.7) if CampaignState.mercy else damage
 
 func time_remaining() -> float:
-	return maxf(night_duration - elapsed, 0.0)
+	return spawner.spawn_window_remaining()
+
+func time_progress_fraction() -> float:
+	return spawner.spawn_progress_fraction()
 
 func _float_text(pos: Vector2, text: String, color: Color, size: int = 16, perfect: bool = false) -> void:
 	_floating_texts.append({

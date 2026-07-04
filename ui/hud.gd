@@ -12,7 +12,9 @@ var _health_lag_fill: ColorRect
 var _health_fill: ColorRect
 var _status: Label
 var _enemy_status: Label
-var _timer_label: Label
+var _timer_track: ColorRect
+var _timer_fill: ColorRect
+var _timer_text: Label
 var _game_over: Control
 var _game_over_label: Label
 
@@ -90,10 +92,14 @@ func _update_enemy_status() -> void:
 		_enemy_status.text = "Sea quiet. Keep sweeping.%s" % tally
 
 func _update_timer() -> void:
-	var seconds := ceili(_board.time_remaining())
-	var minutes := seconds / 60
-	var remainder := seconds % 60
-	_timer_label.text = "%02d:%02d" % [minutes, remainder]
+	var width := get_viewport().get_visible_rect().size.x
+	var fraction := 1.0 - _board.time_progress_fraction()
+	_timer_track.size.x = width
+	_timer_fill.size = Vector2(width * fraction, 18)
+	if _board.spawner.wave_complete():
+		_timer_text.text = "CLEAR THE SEA"
+	else:
+		_timer_text.text = "NIGHT %d" % CampaignState.day
 
 func _update_damage_feedback(delta: float) -> void:
 	if _damage_pulse_age >= 0.0:
@@ -122,18 +128,29 @@ func _on_lighthouse_damaged(_amount: float) -> void:
 	_health_lag_t = 0.0
 
 func _build_ui() -> void:
-	_timer_label = Label.new()
-	_timer_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_timer_label.offset_top = 6
-	_timer_label.offset_bottom = 74
-	_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_timer_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_timer_label.add_theme_font_size_override("font_size", 56)
-	_timer_label.add_theme_color_override("font_color", Color(0.96, 0.78, 0.34))
-	add_child(_timer_label)
+	_timer_track = ColorRect.new()
+	_timer_track.color = Color(0.06, 0.07, 0.08, 0.9)
+	_timer_track.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_timer_track.offset_top = 0
+	_timer_track.offset_bottom = 18
+	add_child(_timer_track)
+
+	_timer_fill = ColorRect.new()
+	_timer_fill.color = Color(0.84, 0.62, 0.25, 0.95)
+	_timer_track.add_child(_timer_fill)
+
+	_timer_text = Label.new()
+	_timer_text.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_timer_text.offset_top = 18
+	_timer_text.offset_bottom = 46
+	_timer_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_timer_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_timer_text.add_theme_font_size_override("font_size", 18)
+	_timer_text.add_theme_color_override("font_color", Color(0.96, 0.78, 0.34))
+	add_child(_timer_text)
 
 	var panel := VBoxContainer.new()
-	panel.position = Vector2(12, 82)
+	panel.position = Vector2(12, 54)
 	add_child(panel)
 	_build_health_bar(panel)
 	_status = Label.new()

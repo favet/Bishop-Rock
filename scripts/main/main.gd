@@ -27,13 +27,13 @@ var _hud: CanvasLayer
 var _campaign_layer: CanvasLayer
 var _day_root: Control
 var _top_bar: HBoxContainer
-var _hull_fill: ColorRect
+var _hull_fill: ProgressBar
 var _hull_label: Label
 var _daylight_tokens: Array[Control] = []
 var _daylight_preview_spend: int = 0
-var _light_list: VBoxContainer
-var _prov_list: VBoxContainer
-var _project_list: VBoxContainer
+var _light_list: GridContainer
+var _prov_list: GridContainer
+var _project_list: GridContainer
 var _tonight_holder: VBoxContainer
 var _today_event_holder: VBoxContainer
 var _log_label: Label
@@ -232,17 +232,29 @@ func _show_day_hub() -> void:
 	_top_bar.add_theme_constant_override("separation", 10)
 	layout.add_child(_top_bar)
 
-	var body := HBoxContainer.new()
+	var body := TabContainer.new()
+	body.name = "DayTabs"
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	body.add_theme_constant_override("separation", 14)
+	body.add_theme_font_size_override("font_size", 18)
+	body.add_theme_color_override("font_selected_color", TEXT)
+	body.add_theme_color_override("font_unselected_color", MUTED)
+	body.add_theme_stylebox_override("panel", _panel_style(Color(0.055, 0.065, 0.07), BRASS_DARK, 1))
+	body.add_theme_stylebox_override("tab_selected", _panel_style(PANEL, BRASS, 2))
+	body.add_theme_stylebox_override("tab_unselected", _panel_style(Color(0.065, 0.075, 0.08), BRASS_DARK, 1))
+	body.add_theme_stylebox_override("tab_hovered", _panel_style(PANEL_HOVER, BRASS, 1))
 	layout.add_child(body)
+
+	var situation := HBoxContainer.new()
+	situation.name = "Situation"
+	situation.add_theme_constant_override("separation", 18)
+	body.add_child(situation)
 
 	# LEFT — TODAY: the situation (last night's consequence, today's event,
 	# tonight's threat). The question the other columns answer.
 	var today := VBoxContainer.new()
-	today.custom_minimum_size = Vector2(285, 0)
+	today.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	today.add_theme_constant_override("separation", 10)
-	body.add_child(today)
+	situation.add_child(today)
 	var today_header := Label.new()
 	today_header.text = "TODAY"
 	today_header.add_theme_font_size_override("font_size", 18)
@@ -251,26 +263,24 @@ func _show_day_hub() -> void:
 	today.add_child(_morning_report())
 	_today_event_holder = VBoxContainer.new()
 	today.add_child(_today_event_holder)
+	var tonight := VBoxContainer.new()
+	tonight.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tonight.add_theme_constant_override("separation", 10)
+	situation.add_child(tonight)
 	_tonight_holder = VBoxContainer.new()
-	today.add_child(_tonight_holder)
+	tonight.add_child(_tonight_holder)
 
-	_light_list = _card_column(body, "KEEP THE LIGHT")
-	_prov_list = _card_column(body, "PROVISIONS")
+	var light_page := _tab_page("Keep Light")
+	body.add_child(light_page)
+	_light_list = _card_grid(light_page)
 
-	var right := VBoxContainer.new()
-	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	right.add_theme_constant_override("separation", 10)
-	body.add_child(right)
-	var workshop := Label.new()
-	workshop.text = "WORKSHOP"
-	workshop.add_theme_font_size_override("font_size", 18)
-	workshop.add_theme_color_override("font_color", BRASS)
-	right.add_child(workshop)
-	_project_list = VBoxContainer.new()
-	_project_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_project_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_project_list.add_theme_constant_override("separation", 8)
-	right.add_child(_project_list)
+	var prov_page := _tab_page("Provisions")
+	body.add_child(prov_page)
+	_prov_list = _card_grid(prov_page)
+
+	var workshop_page := _tab_page("Workshop")
+	body.add_child(workshop_page)
+	_project_list = _card_grid(workshop_page)
 
 	var footer := HBoxContainer.new()
 	footer.add_theme_constant_override("separation", 14)
@@ -311,24 +321,22 @@ func _show_day_hub() -> void:
 	_refresh_day_ui()
 	_rebuild_day_cards()
 
-func _card_column(parent: HBoxContainer, title: String) -> VBoxContainer:
-	var column := VBoxContainer.new()
-	column.custom_minimum_size = Vector2(305, 0)
-	column.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	column.add_theme_constant_override("separation", 8)
-	parent.add_child(column)
-	var header := Label.new()
-	header.text = title
-	header.add_theme_font_size_override("font_size", 18)
-	header.add_theme_color_override("font_color", BRASS)
-	column.add_child(header)
-	# Current content fits in one board-like page.
-	var list := VBoxContainer.new()
-	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	list.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	list.add_theme_constant_override("separation", 8)
-	column.add_child(list)
-	return list
+func _tab_page(title: String) -> MarginContainer:
+	var page := MarginContainer.new()
+	page.name = title
+	for side in ["left", "right", "top", "bottom"]:
+		page.add_theme_constant_override("margin_" + side, 14)
+	return page
+
+func _card_grid(parent: Control) -> GridContainer:
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	grid.add_theme_constant_override("h_separation", 14)
+	grid.add_theme_constant_override("v_separation", 14)
+	parent.add_child(grid)
+	return grid
 
 func _rebuild_day_cards() -> void:
 	for list in [_light_list, _prov_list, _project_list, _today_event_holder]:
@@ -486,6 +494,7 @@ func _start_fishing(spot: String, dim: Control, chooser: Control) -> void:
 func _project_card(project_id: String) -> VBoxContainer:
 	var project := CampaignState.project_def(project_id)
 	var box := VBoxContainer.new()
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	box.add_theme_constant_override("separation", 4)
 	var wrap := PanelContainer.new()
 	wrap.tooltip_text = _project_tooltip(project["start_cost"])
@@ -707,16 +716,19 @@ func _hull_resource() -> PanelContainer:
 	_hull_label.text = "HULL %d/%d" % [CampaignState.hull, CampaignState.max_hull]
 	_hull_label.add_theme_color_override("font_color", TEXT)
 	rows.add_child(_hull_label)
-	var bg := ColorRect.new()
-	bg.custom_minimum_size = Vector2(140, 8)
-	bg.clip_contents = true
-	bg.color = Color(0.16, 0.17, 0.17)
-	rows.add_child(bg)
-	_hull_fill = ColorRect.new()
-	_hull_fill.size = Vector2(140.0 * clampf(float(CampaignState.hull) / float(CampaignState.max_hull), 0.0, 1.0), 8)
-	_hull_fill.custom_minimum_size = Vector2(_hull_fill.size.x, 8)
-	_hull_fill.color = GREEN if CampaignState.hull > CampaignState.max_hull * 0.35 else RED
-	bg.add_child(_hull_fill)
+	_hull_fill = ProgressBar.new()
+	_hull_fill.custom_minimum_size = Vector2(140, 10)
+	_hull_fill.min_value = 0.0
+	_hull_fill.max_value = float(CampaignState.max_hull)
+	_hull_fill.value = float(CampaignState.hull)
+	_hull_fill.show_percentage = false
+	var bg_style := StyleBoxFlat.new()
+	bg_style.bg_color = Color(0.16, 0.17, 0.17)
+	var fill_style := StyleBoxFlat.new()
+	fill_style.bg_color = GREEN if CampaignState.hull > CampaignState.max_hull * 0.35 else RED
+	_hull_fill.add_theme_stylebox_override("background", bg_style)
+	_hull_fill.add_theme_stylebox_override("fill", fill_style)
+	rows.add_child(_hull_fill)
 	return wrap
 
 func _daylight_resource() -> PanelContainer:
@@ -781,6 +793,7 @@ func _update_daylight_tokens() -> void:
 func _base_card_button() -> Button:
 	var button := Button.new()
 	button.custom_minimum_size = Vector2(0, 92)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.add_theme_color_override("font_color", TEXT)
 	button.add_theme_stylebox_override("normal", _panel_style(Color(0.075, 0.085, 0.085), BRASS_DARK, 1))

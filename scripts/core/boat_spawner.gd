@@ -25,6 +25,7 @@ signal boat_spawned(boat: Boat)
 @export var min_interval: float = 1.5
 @export var ramp_duration: float = 120.0
 @export var first_spawn_delay: float = 1.5
+@export var spawn_window: float = 35.0
 @export var wave_size: int = 24  ## total boats for the night; spawning stops once reached
 @export var max_simultaneous: int = 99
 @export var speed_scale: float = 1.0
@@ -33,7 +34,6 @@ var active: bool = true
 var spawned_count: int = 0
 
 var _elapsed: float = 0.0
-var _timer: float = 0.0
 var _gun: MainGun
 # Deterministic per (run seed, day): the same night replays with the same
 # boats regardless of restarts. Boat TYPES come from CampaignState.night_plan()
@@ -43,7 +43,6 @@ var _rng: RandomNumberGenerator
 var _plan: Array[String] = []
 
 func _ready() -> void:
-	_timer = first_spawn_delay
 	_rng = CampaignState.night_rng()
 	_plan = CampaignState.night_plan()
 
@@ -57,14 +56,25 @@ func _physics_process(delta: float) -> void:
 	var scaled_delta := delta * (_gun.world_time_scale() if _gun != null else 1.0)
 
 	_elapsed += scaled_delta
-	_timer -= scaled_delta
-	if _timer <= 0.0:
-		_timer = current_interval()
+	if _elapsed >= _spawn_time_for(spawned_count):
 		_spawn()
 
 func current_interval() -> float:
 	var t := clampf(_elapsed / ramp_duration, 0.0, 1.0)
 	return lerpf(start_interval, min_interval, t)
+
+func spawn_window_remaining() -> float:
+	return maxf(spawn_window - _elapsed, 0.0)
+
+func spawn_progress_fraction() -> float:
+	return clampf(_elapsed / maxf(spawn_window, 0.1), 0.0, 1.0)
+
+func _spawn_time_for(index: int) -> float:
+	if wave_size <= 1:
+		return first_spawn_delay
+	var usable_window := maxf(spawn_window - first_spawn_delay, 0.1)
+	var spacing := usable_window / float(wave_size - 1)
+	return first_spawn_delay + spacing * float(index)
 
 func remaining_to_spawn() -> int:
 	return maxi(wave_size - spawned_count, 0)

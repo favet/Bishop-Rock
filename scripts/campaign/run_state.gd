@@ -513,7 +513,7 @@ func raid_profile() -> Dictionary:
 			"start_interval": 3.6,
 			"min_interval": 2.8,
 			"first_spawn_delay": 1.5,
-			"night_duration": 65.0,
+			"spawn_window": 24.0,
 			"use_v0_hazards": false,
 		}
 	if day <= 4:
@@ -527,7 +527,7 @@ func raid_profile() -> Dictionary:
 			"start_interval": 3.4,
 			"min_interval": 2.4,
 			"first_spawn_delay": 1.2,
-			"night_duration": 75.0,
+			"spawn_window": 30.0,
 			"use_v0_hazards": false,
 		}
 	if day <= 9:
@@ -541,7 +541,7 @@ func raid_profile() -> Dictionary:
 			"start_interval": 3.2,
 			"min_interval": 2.2,
 			"first_spawn_delay": 1.2,
-			"night_duration": 90.0,
+			"spawn_window": 38.0,
 			"use_v0_hazards": false,
 		}
 	if day <= 14:
@@ -555,7 +555,7 @@ func raid_profile() -> Dictionary:
 			"start_interval": 3.0,
 			"min_interval": 1.9,
 			"first_spawn_delay": 1.0,
-			"night_duration": 100.0,
+			"spawn_window": 46.0,
 			"use_v0_hazards": false,
 		}
 	# Day 15+: unbounded multiplicative growth. There is no final day — the
@@ -571,7 +571,7 @@ func raid_profile() -> Dictionary:
 		"start_interval": maxf(2.6 * pow(0.985, over), 1.2),
 		"min_interval": maxf(1.5 * pow(0.985, over), 0.7),
 		"first_spawn_delay": 1.0,
-		"night_duration": minf(110.0 + float(over), 150.0),
+		"spawn_window": minf(52.0 + float(over) * 1.5, 85.0),
 		"use_v0_hazards": false,
 	}
 

@@ -23,7 +23,9 @@ Day 1 starts at 85/100 hull, 6 Daylight, 12 gold, 8 wood, 2 scrap, 3 food, 1 far
 
 Starter campaign visibility is stricter than v0: no spawn pings, no free
 contact ticks, and no ghost ships. The player sweeps the beam to find boats,
-so early boats are slower and each night has an explicit countdown timer.
+so early boats are slower. Boats are scheduled across a compact spawn window;
+the night ends as soon as all spawned boats are resolved, with no empty wait
+for a separate clock.
 
 Campaign nights use `CampaignState.raid_profile()` instead of the original 24-boat v0 pressure.
 
@@ -51,10 +53,9 @@ When the wave is fully spawned and all boats are resolved, the dawn summary show
 
 ## Day Hub
 
-Current day hub: top core resources, left Today/Tonight, center Keep the
-Light and Provisions action groups, right Projects/Built badges, fixed
-"Light the Lantern" button at the bottom. No scrollbars at the current
-content level.
+Current day hub: top core resources, focused tabs for Situation, Keep Light,
+Provisions, and Workshop, and a fixed "Light the Lantern" button at the
+bottom. No scrollbars at the current content level.
 
 The day hub is a brass-on-iron card layout built in `scripts/main/main.gd`:
 
@@ -73,8 +74,9 @@ Card conventions:
 
 Debug: the F3 world overlay is off by default; the normal night HUD shows only hull, night number, contacts, and rifle readiness.
 
-Current night HUD: the top of the screen is dominated by the timer. Boat
-shot/remaining counts are intentionally omitted from normal play.
+Current night HUD: the top edge is a full-width deployment bar that drains
+left-to-right as the spawn window passes. Boat shot/remaining counts are
+intentionally omitted from normal play.
 
 ## Projects
 
