@@ -29,13 +29,20 @@ Design docs live in [Docs/](Docs/) — start with [Docs/PRODUCT_BRIEF.md](Docs/P
 | `tests/` | Reserved for a future Godot test addon (GUT or gdUnit4) |
 | `Docs/` | Design docs and preproduction handoff |
 
-## Current State — Night Board v0
+## Current State — Campaign Loop v1
 
-The first playable vertical slice: a single schematic night defense. Boats — basic, fast/weak, and slow/tough variants — spawn from any direction (a finite wave of 24) and steer toward the lighthouse around rocks; nets slow them, mines blow them up, buoys reveal them, and any hit visibly slows them down for a moment. The beam auto-sweeps by default (arrow keys to override); the main gun's hold-to-charge shot is the main killer, rendered as a ring around the lighthouse itself (not a HUD corner) that also drags the whole world into slow motion as it fills — overshoot it and the gun misfires, hurting the lighthouse. One shore turret chips away as a weak last-line defense. Boats show HP pips above their hull; the HUD shows enemy counts and unmistakable feedback (screen shake, flash, "LIGHTHOUSE HIT") whenever the lighthouse takes a hit. Lighthouse hull at 0 ends the run — press R to restart.
+The game is currently in the **Campaign Loop v1** phase. It features a seven-day survival loop that wraps the original Night Board v0 defense phase:
 
-Architecture notes for extending it: [Docs/NIGHT_BOARD_V0.md](Docs/NIGHT_BOARD_V0.md). Task list: [Docs/BACKLOG.md](Docs/BACKLOG.md).
+- **Night Raid**: Boats — basic, fast/weak, and slow/tough variants — spawn and steer toward the lighthouse. The campaign logic curates wave composition and size based on the day. The main gun's hold-to-charge shot is the main killer, slowing down time while charging. Overshoot the charge and it misfires, hurting the lighthouse. The shore turret, mines, barricades, and other hazards help shape the sea.
+- **Dawn Summary**: Once the wave is cleared, a dawn summary displays boats sunk, gold earned, perfect hit bonuses, damage taken, and the state of your hull and defenses.
+- **Day Hub**: A visual day hub lets you spend limited energy and resources (gold, wood, scrap, food) on actions across four zones (Lighthouse, Workshop, Shore / Dock / Farm, Quarters). You can repair the lighthouse, craft defenses, start long-term upgrade projects, and prepare for the next night.
+- **Next Night**: Defenses are consumed or persisted based on their type, and you survive another night. Lighthouse hull at 0 ends the run.
 
-Not in yet: day loop/economy, tide, ammo types, radar inset, night repair, a real win/dawn screen (the wave just stops spawning once cleared).
+Architecture notes for the original night board: [Docs/NIGHT_BOARD_V0.md](Docs/NIGHT_BOARD_V0.md).
+Campaign loop design and specs: [Docs/CAMPAIGN_LOOP_V1.md](Docs/CAMPAIGN_LOOP_V1.md).
+Task list: [Docs/BACKLOG.md](Docs/BACKLOG.md).
+
+Not in yet: trader, sector placement UI, breakwaters, decoys, storms, advanced ammo types, radar inset.
 
 ## Controls
 
