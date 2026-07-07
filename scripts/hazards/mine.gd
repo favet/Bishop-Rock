@@ -5,7 +5,7 @@ extends Node2D
 
 @export var trigger_radius: float = 16.0
 @export var blast_radius: float = 42.0
-@export var damage: float = 60.0
+@export var damage: float = 10.0
 
 const FLASH_TIME := 0.35
 

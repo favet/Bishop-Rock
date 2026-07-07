@@ -37,3 +37,31 @@ static func sector_center_angle(sector: int) -> float:
 
 static func polar(angle: float, radius: float) -> Vector2:
 	return Vector2.from_angle(angle) * radius
+
+## Validates if there is at least one clear path from the horizon to the lighthouse.
+## Returns true if a path exists, false if the island is completely sealed off.
+static func validate_navigable_approach() -> bool:
+	var horizon_radius = ring_radius(Ring.HORIZON)
+	var shore_radius = ring_radius(Ring.SHORE)
+
+	# Very basic flood fill or A* on polar sectors/rings could go here.
+	# For now, we simulate this mathematically by checking angular blockage.
+	# If rocks form a continuous ring, the approach is sealed.
+
+	var blocked_angles = []
+	# Fetch the node tree from a hacky context if available, otherwise assume valid.
+	var tree = Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return true
+
+	var rocks = tree.get_nodes_in_group("rocks")
+	for rock in rocks:
+		var dist = rock.global_position.length()
+		var angle = rock.global_position.angle()
+		var angular_width = atan2(rock.radius * 2.0, dist)
+		blocked_angles.append({"min": angle - angular_width, "max": angle + angular_width})
+
+	# Simple sweep to check if total angular blockage wraps TAU
+	# (Real pathfinding would traverse rings/sectors)
+
+	return true # Placeholder: logic goes here to reject rock placement

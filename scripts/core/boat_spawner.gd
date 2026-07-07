@@ -18,6 +18,8 @@ signal boat_spawned(boat: Boat)
 @export var boat_scene: PackedScene
 @export var fast_boat_scene: PackedScene
 @export var heavy_boat_scene: PackedScene
+@export var fog_boat_scene: PackedScene = preload("res://scenes/boats/FogMakerBoat.tscn")
+@export var fog_boat_weight: float = 0.05
 @export var fast_boat_weight: float = 0.3
 @export var heavy_boat_weight: float = 0.2
 @export var boats_container: NodePath
@@ -66,9 +68,11 @@ func wave_complete() -> bool:
 
 func _pick_scene() -> PackedScene:
 	var roll := randf()
-	if roll < heavy_boat_weight and heavy_boat_scene != null:
+	if roll < fog_boat_weight and fog_boat_scene != null:
+		return fog_boat_scene
+	if roll < fog_boat_weight + heavy_boat_weight and heavy_boat_scene != null:
 		return heavy_boat_scene
-	if roll < heavy_boat_weight + fast_boat_weight and fast_boat_scene != null:
+	if roll < fog_boat_weight + heavy_boat_weight + fast_boat_weight and fast_boat_scene != null:
 		return fast_boat_scene
 	return boat_scene
 

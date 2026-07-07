@@ -23,6 +23,9 @@ var _beam: LighthouseBeam
 
 static var GHOST_HULL := PackedVector2Array([Vector2(12, 0), Vector2(-8, 6), Vector2(-8, -6)])
 
+func _ready() -> void:
+	add_to_group("visibility_system")
+
 func _physics_process(delta: float) -> void:
 	if _beam == null:
 		_beam = get_tree().get_first_node_in_group("beam") as LighthouseBeam
@@ -43,8 +46,16 @@ func _physics_process(delta: float) -> void:
 	queue_redraw()
 
 func _compute_state(boat: Boat) -> Boat.VisState:
+	# Check if boat is inside any fog zone
+	var in_fog = false
+	for node in get_tree().get_nodes_in_group("fog_makers"):
+		var fog_boat = node as FogMakerBoat
+		if fog_boat != boat and fog_boat.global_position.distance_to(boat.global_position) <= fog_boat.fog_radius:
+			in_fog = true
+			break
+
 	if _beam.is_point_illuminated(boat.global_position):
-		return Boat.VisState.ILLUMINATED
+		return Boat.VisState.SPOTTED if in_fog else Boat.VisState.ILLUMINATED
 	if boat.global_position.length() <= spotted_radius:
 		return Boat.VisState.SPOTTED
 	for node in get_tree().get_nodes_in_group("buoys"):

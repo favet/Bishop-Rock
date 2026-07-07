@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://fogmakerboat123"]
+
+[ext_resource type="Script" path="res://scripts/boats/fog_maker_boat.gd" id="1_fmb"]
+
+[node name="FogMakerBoat" type="Node2D"]
+script = ExtResource("1_fmb")
+max_health = 6.0
+speed = 20.0
+hull_tint = Color(0.6, 0.4, 0.8, 1)
+hull_scale = 1.3
