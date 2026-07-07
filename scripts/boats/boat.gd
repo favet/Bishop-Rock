@@ -15,7 +15,7 @@ signal reached_lighthouse(boat: Boat)
 enum VisState { CONTACT, SPOTTED, ILLUMINATED }
 
 @export var max_health: float = 4.0  ## tuned so a PERFECT (4x) main-gun shot one-shots the basic boat
-@export var speed: float = 40.0
+@export var speed: float = 30.0
 @export var turn_rate: float = 2.5  # rad/s
 @export var ram_damage: float = 15.0
 @export var hull_radius: float = 8.0
@@ -38,6 +38,10 @@ var killed_by_perfect: bool = false
 var debug_desired := Vector2.ZERO
 var debug_avoid := Vector2.ZERO
 
+var _hard_blocked: bool = false
+var _attack_target: Rock = null
+var _attack_timer: float = 0.0
+
 var _hit_slow_factor: float = 1.0
 var _gun: MainGun
 
@@ -59,16 +63,40 @@ func _physics_process(delta: float) -> void:
 	if _gun == null:
 		_gun = get_tree().get_first_node_in_group("main_gun") as MainGun
 	var world_scale := _gun.world_time_scale() if _gun != null else 1.0
+	if vis_state == VisState.CONTACT:
+		world_scale *= 0.7
 	var scaled_delta := delta * world_scale
 
 	if _hit_slow_factor < 1.0:
 		_hit_slow_factor = move_toward(_hit_slow_factor, 1.0, delta / hit_slow_recovery_time)
+
+	# If attacking a rock because we are hard blocked
+	if _hard_blocked and is_instance_valid(_attack_target):
+		_attack_timer -= scaled_delta
+		var to_rock = _attack_target.global_position - global_position
+		heading = rotate_toward(heading, to_rock.angle(), turn_rate * scaled_delta)
+		rotation = heading
+		if _attack_timer <= 0.0:
+			# "Attack" the rock by instantly destroying it but taking self damage
+			_attack_target.queue_free()
+			_attack_target = null
+			_hard_blocked = false
+			take_damage(max_health * 0.5) # Take 50% damage when destroying a rock
+		return
 
 	var desired := (-global_position).normalized()
 	var avoid := _rock_avoidance()
 	debug_desired = desired
 	debug_avoid = avoid
 	var steer := desired + avoid
+
+	# Detect if we are stuck (repulsion perfectly equals desired)
+	if steer.length_squared() < 0.01 and avoid.length_squared() > 0.1:
+		_hard_blocked = true
+		_attack_target = _find_closest_rock()
+		_attack_timer = 3.0 # Takes 3 seconds of grinding against it to break it
+		return
+
 	if steer.length_squared() > 0.0001:
 		heading = rotate_toward(heading, steer.angle(), turn_rate * scaled_delta)
 	rotation = heading
@@ -95,6 +123,17 @@ func take_damage(amount: float, quality: int = -1) -> bool:
 	return false
 
 ## Radial repulsion from rocks within lookahead range.
+func _find_closest_rock() -> Rock:
+	var closest: Rock = null
+	var closest_dist := 99999.0
+	for node in get_tree().get_nodes_in_group("rocks"):
+		var rock := node as Rock
+		var dist := global_position.distance_to(rock.global_position)
+		if dist < closest_dist:
+			closest = rock
+			closest_dist = dist
+	return closest
+
 func _rock_avoidance() -> Vector2:
 	var avoid := Vector2.ZERO
 	for node in get_tree().get_nodes_in_group("rocks"):
@@ -127,7 +166,7 @@ func _net_slow_factor() -> float:
 func _draw() -> void:
 	match vis_state:
 		VisState.CONTACT:
-			pass  # invisible on the main map; VisibilitySystem draws a sector tick
+			pass  # truly invisible on the main map until illuminated or spotted
 		VisState.SPOTTED:
 			var outline := _scaled_hull()
 			outline.append(outline[0])

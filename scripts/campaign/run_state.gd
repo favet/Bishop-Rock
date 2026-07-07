@@ -8,63 +8,63 @@ const START_PROJECTS := {
 		"display_name": "Greased Crank",
 		"zone": "Lighthouse",
 		"effect": "Beam turn speed +5%",
-		"start_cost": {"gold": 8, "scrap": 2},
+		"start_cost": {"gold": 8, "materials": 2},
 		"work_required": 1,
 	},
 	"breech_cleaning_kit": {
 		"display_name": "Breech Cleaning Kit",
 		"zone": "Workshop",
 		"effect": "Reload duration -5%",
-		"start_cost": {"gold": 10, "scrap": 3},
+		"start_cost": {"gold": 10, "materials": 3},
 		"work_required": 1,
 	},
 	"patch_frame": {
 		"display_name": "Patch Frame",
 		"zone": "Lighthouse",
 		"effect": "Patch hull repairs +2",
-		"start_cost": {"gold": 8, "wood": 4},
+		"start_cost": {"gold": 8, "materials": 4},
 		"work_required": 1,
 	},
 	"garden_bed_prep": {
 		"display_name": "Garden Bed Prep",
 		"zone": "Shore / Dock / Farm",
 		"effect": "Potato harvest +1 food",
-		"start_cost": {"gold": 6, "wood": 4},
+		"start_cost": {"gold": 6, "materials": 4},
 		"work_required": 1,
 	},
 	"reinforced_hull_1": {
 		"display_name": "Reinforced Hull I",
 		"zone": "Lighthouse",
 		"effect": "Max hull +15 and heal +15",
-		"start_cost": {"gold": 30, "wood": 12, "scrap": 4},
+		"start_cost": {"gold": 30, "materials": 16},
 		"work_required": 2,
 	},
 	"lens_crank_1": {
 		"display_name": "Lens Crank I",
 		"zone": "Lighthouse",
 		"effect": "Beam turn speed +12%",
-		"start_cost": {"gold": 25, "scrap": 6, "tools": 1},
+		"start_cost": {"gold": 25, "materials": 6, "tools": 1},
 		"work_required": 2,
 	},
 	"rifle_breech_1": {
 		"display_name": "Rifle Breech I",
 		"zone": "Workshop",
 		"effect": "Reload duration -10%",
-		"start_cost": {"gold": 35, "scrap": 8, "tools": 1},
+		"start_cost": {"gold": 35, "materials": 8, "tools": 1},
 		"work_required": 2,
 	},
 	"build_plot_2": {
 		"display_name": "Build Plot II",
 		"zone": "Shore / Dock / Farm",
 		"effect": "Farm plots +1",
-		"start_cost": {"gold": 18, "wood": 8},
+		"start_cost": {"gold": 18, "materials": 8},
 		"work_required": 2,
 	},
 	"rusty_autoturret": {
 		"display_name": "Rusty Autoturret",
 		"zone": "Workshop",
 		"effect": "Unlocks the shore turret",
-		"start_cost": {"gold": 55, "scrap": 14, "tools": 2},
+		"start_cost": {"gold": 55, "materials": 14, "tools": 2},
 		"work_required": 4,
 	},
 }
@@ -76,8 +76,8 @@ var energy_max: int
 var energy_today: int
 var tomorrow_energy_bonus: int
 var gold: int
-var wood: int
-var scrap: int
+var materials: int
+
 var food: int
 var tools: int
 var mines: int
@@ -104,8 +104,7 @@ func reset_campaign() -> void:
 	energy_today = 6
 	tomorrow_energy_bonus = 0
 	gold = 12
-	wood = 8
-	scrap = 2
+	materials = 10
 	food = 3
 	tools = 0
 	mines = 0
@@ -161,15 +160,15 @@ func missing_text(cost: Dictionary) -> String:
 func perform_action(action_id: String) -> String:
 	match action_id:
 		"patch_hull":
-			if not spend({"energy_today": 1, "gold": 3, "wood": 2}):
-				return "Missing %s." % missing_text({"energy_today": 1, "gold": 3, "wood": 2})
+			if not spend({"energy_today": 1, "gold": 3, "materials": 2}):
+				return "Missing %s." % missing_text({"energy_today": 1, "gold": 3, "materials": 2})
 			hull = mini(max_hull, hull + 10 + (2 if completed_projects.has("patch_frame") else 0))
 			changed.emit()
 			return "Patched hull."
 		"full_repair":
-			if not spend({"energy_today": 2, "gold": 6, "wood": 4}):
-				return "Missing %s." % missing_text({"energy_today": 2, "gold": 6, "wood": 4})
-			hull = mini(max_hull, hull + 22)
+			if not spend({"energy_today": 2, "gold": 6, "materials": 4}):
+				return "Missing %s." % missing_text({"energy_today": 2, "gold": 6, "materials": 4})
+			hull = mini(max_hull, hull + 25)
 			changed.emit()
 			return "Repairs completed."
 		"clean_lens":
@@ -178,36 +177,36 @@ func perform_action(action_id: String) -> String:
 			clean_lens_active = true
 			changed.emit()
 			return "Lens cleaned for tonight."
-		"sort_scrap":
+		"sort_materials":
 			if not spend({"energy_today": 1}):
 				return "Need 1 energy."
-			scrap += 2
+			materials += 2
 			changed.emit()
-			return "Sorted +2 scrap."
+			return "Sorted +2 materials."
 		"make_tool":
-			if not spend({"energy_today": 1, "scrap": 5}):
-				return "Missing %s." % missing_text({"energy_today": 1, "scrap": 5})
+			if not spend({"energy_today": 1, "materials": 5}):
+				return "Missing %s." % missing_text({"energy_today": 1, "materials": 5})
 			tools += 1
 			changed.emit()
 			return "Made a tool."
 		"craft_mines":
-			if not spend({"energy_today": 1, "gold": 4, "scrap": 3}):
-				return "Missing %s." % missing_text({"energy_today": 1, "gold": 4, "scrap": 3})
+			if not spend({"energy_today": 1, "gold": 4, "materials": 3}):
+				return "Missing %s." % missing_text({"energy_today": 1, "gold": 4, "materials": 3})
 			mines += 2
 			changed.emit()
 			return "Crafted 2 mines."
 		"build_barricade":
-			if not spend({"energy_today": 1, "wood": 4}):
-				return "Missing %s." % missing_text({"energy_today": 1, "wood": 4})
+			if not spend({"energy_today": 1, "materials": 4}):
+				return "Missing %s." % missing_text({"energy_today": 1, "materials": 4})
 			barricades += 1
 			changed.emit()
 			return "Built a barricade."
-		"gather_driftwood":
+		"gather_driftmaterials":
 			if not spend({"energy_today": 1}):
 				return "Need 1 energy."
-			wood += 4
+			materials += 4
 			changed.emit()
-			return "Gathered +4 wood."
+			return "Gathered +4 materials."
 		"fish":
 			if not spend({"energy_today": 1}):
 				return "Need 1 energy."
@@ -221,10 +220,9 @@ func perform_action(action_id: String) -> String:
 			if not spend({"energy_today": 2}):
 				return "Need 2 energy."
 			daily_caps["dive_wreckage"] = true
-			wood += 2
-			scrap += 3
+			materials += 5
 			changed.emit()
-			return "Recovered wood and scrap."
+			return "Recovered materials."
 		"plant_potatoes":
 			if _open_farm_plots() <= 0:
 				return "No open farm plot."

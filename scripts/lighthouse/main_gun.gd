@@ -38,8 +38,8 @@ extends Node2D
 @export_group("Charge Zones")  # fractions of the 0..1 ring
 @export var bonus_zone_min: float = 0.75
 @export var bonus_zone_max: float = 0.95
-@export var perfect_zone_min: float = 0.88
-@export var perfect_zone_max: float = 0.94
+@export var perfect_zone_min: float = 0.86
+@export var perfect_zone_max: float = 0.95
 
 @export_group("Misfire")
 @export var misfire_reload_penalty: float = 1.6  ## reload_time multiplier after a misfire
@@ -304,7 +304,7 @@ func _draw_charge_ring() -> void:
 	var font := ThemeDB.fallback_font
 	draw_arc(Vector2.ZERO, CHARGE_RING_RADIUS, 0.0, TAU, 64, Color(1.0, 1.0, 1.0, 0.10), RING_THICKNESS)
 	_draw_ring_zone(bonus_zone_min, bonus_zone_max, Color(1.0, 0.75, 0.25, 0.55))
-	_draw_ring_zone(perfect_zone_min, perfect_zone_max, Color(1.0, 0.3, 0.25, 0.7))
+	_draw_ring_zone(perfect_zone_min, perfect_zone_max, Color(1.0, 0.2, 0.15, 0.9))
 
 	if _charging:
 		var start_angle := -PI / 2.0
@@ -376,5 +376,12 @@ func _draw_tracers() -> void:
 			var base_radius := 6.0 if quality == ShotQuality.NORMAL else (9.0 if quality == ShotQuality.CHARGED else 14.0)
 			draw_circle(tracer.to, base_radius * (1.0 - fade * 0.5), color)
 			if quality == ShotQuality.PERFECT:
-				# Stronger primitive flash for a perfect hit: expanding ring.
-				draw_arc(tracer.to, base_radius * 1.6 * (1.0 - fade) + 4.0, 0.0, TAU, 20, Color(1.0, 1.0, 0.8, fade), 2.0)
+				# Massive perfect hit visual juice
+				draw_arc(tracer.to, base_radius * 2.5 * (1.0 - fade) + 4.0, 0.0, TAU, 24, Color(1.0, 1.0, 1.0, fade), 4.0)
+				draw_arc(tracer.to, base_radius * 1.5 * (1.0 - fade) + 2.0, 0.0, TAU, 24, Color(1.0, 0.2, 0.1, fade), 3.0)
+				# Quick burst lines
+				for i in 8:
+					var a := TAU * float(i) / 8.0
+					var inner := base_radius * 0.5
+					var outer := base_radius * (1.5 + (1.0-fade) * 2.0)
+					draw_line(tracer.to + Vector2.from_angle(a) * inner, tracer.to + Vector2.from_angle(a) * outer, Color(1.0, 1.0, 1.0, fade), 2.0)

@@ -131,12 +131,18 @@ func _build_ui() -> void:
 	panel.add_child(_enemy_status)
 
 	var hint := Label.new()
-	hint.text = "←/→ beam (hold ↓ precision) · Q auto-sweep on/off · Hold Space to charge, release to fire · Tab target · 1-3 mode · P slow · F3 debug · R restart"
+	hint.text = "←/→ beam (hold ↓ precision) · Q auto-sweep on/off · Hold Space to charge, release to fire · Tab target · 1-3 mode · P pause · F3 debug · R restart"
 	hint.modulate = Color(1, 1, 1, 0.45)
-	hint.position = Vector2(12, 694)
+	hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 12)
+	hint.offset_top = -30
 	add_child(hint)
 
 	_build_damage_feedback()
+
+	var radar_scene = load("res://ui/Radar.tscn")
+	if radar_scene:
+		var radar = radar_scene.instantiate()
+		add_child(radar)
 
 	_game_over = Control.new()
 	_game_over.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -189,7 +195,7 @@ func _build_damage_feedback() -> void:
 	_hit_label.add_theme_color_override("font_color", Color(1.0, 0.35, 0.3))
 	_hit_label.add_theme_font_size_override("font_size", 22)
 	_hit_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_hit_label.custom_minimum_size = Vector2(240, 30)
-	_hit_label.position = Vector2(520, 90)
+	_hit_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE, Control.PRESET_MODE_MINSIZE, 0)
+	_hit_label.offset_top = 90
 	_hit_label.visible = false
 	add_child(_hit_label)

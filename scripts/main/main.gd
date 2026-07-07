@@ -45,10 +45,10 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if Input.is_action_just_pressed("restart"):
 		Engine.time_scale = 1.0
+		get_tree().paused = false
 		get_tree().reload_current_scene()
 	elif Input.is_action_just_pressed("pause_slow") and not _frozen:
-		_slowed = not _slowed
-		Engine.time_scale = SLOW_SCALE if _slowed else 1.0
+		get_tree().paused = not get_tree().paused
 
 	if _shake_strength > 0.0:
 		_shake_strength = maxf(_shake_strength - SHAKE_DECAY * delta, 0.0)
@@ -140,14 +140,22 @@ func _show_day_hub() -> void:
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_day_root.add_child(bg)
 
+	var margin := MarginContainer.new()
+	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 40)
+	margin.add_theme_constant_override("margin_right", 40)
+	margin.add_theme_constant_override("margin_top", 40)
+	margin.add_theme_constant_override("margin_bottom", 40)
+	_day_root.add_child(margin)
+
 	var layout := VBoxContainer.new()
-	layout.position = Vector2(18, 14)
-	layout.size = Vector2(1244, 690)
-	layout.add_theme_constant_override("separation", 10)
-	_day_root.add_child(layout)
+	layout.add_theme_constant_override("separation", 20)
+	margin.add_child(layout)
 
 	_top_bar = Label.new()
-	_top_bar.add_theme_font_size_override("font_size", 16)
+	_top_bar.add_theme_font_size_override("font_size", 24)
+	_top_bar.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_top_bar.add_theme_color_override("font_color", Color(0.9, 0.8, 0.6))
 	layout.add_child(_top_bar)
 
 	var body := HBoxContainer.new()
@@ -255,22 +263,22 @@ func _actions_for_zone(zone: String) -> Array[Dictionary]:
 	match zone:
 		"Lighthouse":
 			return [
-				{"id": "patch_hull", "label": "Patch hull   E1 -> +10 hull   Cost 3g 2 wood"},
-				{"id": "full_repair", "label": "Full repair   E2 -> +22 hull   Cost 6g 4 wood"},
+				{"id": "patch_hull", "label": "Patch hull   E1 -> +10 hull   Cost 3g 3 materials"},
+				{"id": "full_repair", "label": "Full repair   E2 -> +22 hull   Cost 6g 6 materials"},
 				{"id": "clean_lens", "label": "Clean lens   E1 -> easier handling tonight"},
 			]
 		"Workshop":
 			return [
-				{"id": "sort_scrap", "label": "Sort scrap   E1 -> scrap +2"},
-				{"id": "make_tool", "label": "Make tool   E1 scrap5 -> tool +1   Used for Lens Crank I, Rifle Breech I, Rusty Autoturret"},
-				{"id": "craft_mines", "label": "Craft mines   E1 4g scrap3 -> mines +2"},
-				{"id": "build_barricade", "label": "Build barricade   E1 wood4 -> barricade +1"},
+				{"id": "sort_materials", "label": "Sort materials   E1 -> materials +2"},
+				{"id": "make_tool", "label": "Make tool   E1 materials5 -> tool +1   Used for Lens Crank I, Rifle Breech I, Rusty Autoturret"},
+				{"id": "craft_mines", "label": "Craft mines   E1 4g materials4 -> mines +2"},
+				{"id": "build_barricade", "label": "Build barricade   E1 materials5 -> barricade +1"},
 			]
 		"Shore / Dock / Farm":
 			return [
-				{"id": "gather_driftwood", "label": "Gather driftwood   E1 -> wood +4"},
+				{"id": "gather_driftwood", "label": "Gather driftwood   E1 -> materials +5"},
 				{"id": "fish", "label": "Fish   E1 -> food +2, gold +2"},
-				{"id": "dive_wreckage", "label": "Dive wreckage   E2 -> wood +2, scrap +3   Once/day"},
+				{"id": "dive_wreckage", "label": "Dive wreckage   E2 -> materials +6   Once/day"},
 				{"id": "plant_potatoes", "label": "Plant potatoes   E1 food1 -> crop in 3 days"},
 				{"id": "harvest_potatoes", "label": "Harvest potatoes   E0 -> food +5"},
 			]
@@ -290,7 +298,7 @@ func _refresh_day_ui() -> void:
 		return
 	_top_bar.text = "♥ %d/%d   ⚡ %d/%d   🪙 %d   🪵 %d   ⚙ %d   🍲 %d   🔧 %d   💣 %d   🛡 %d   Day %d" % [
 		CampaignState.hull, CampaignState.max_hull, CampaignState.energy_today, CampaignState.energy_max,
-		CampaignState.gold, CampaignState.wood, CampaignState.scrap, CampaignState.food,
+		CampaignState.gold, CampaignState.materials, CampaignState.materials, CampaignState.food,
 		CampaignState.tools, CampaignState.mines, CampaignState.barricades, CampaignState.day,
 	]
 
